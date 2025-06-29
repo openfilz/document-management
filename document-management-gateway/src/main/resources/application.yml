@@ -1,0 +1,79 @@
+# src/main/resources/application.yml (for gateway)
+spring:
+  application:
+    name: document-management-gateway
+  cloud:
+    gateway:
+      default-filters: # Default filters for all routes
+        - TokenRelay # If you want to propagate the JWT token to downstream services
+        # - Add other default filters like Retry, RateLimiter, etc.
+      routes:
+        - id: document-management-api-route
+          # uri: lb://document-management-api # If using service discovery (e.g., Eureka, Consul)
+          uri: http://localhost:8081 # If direct routing (replace document-management-api with actual service name if using discovery)
+          predicates:
+            - Path=/dms-api/** # All requests to /dms-api/... will be routed
+          filters:
+            - StripPrefix=1 # Strips /dms-api from the path before forwarding (e.g. /dms-api/api/v1/folders -> /api/v1/folders)
+            # You might want JWT validation here too, or rely on the resource server (DMS API) to do it.
+            # If gateway validates, it's defense in depth.
+            # - name: RequestRateLimiter
+            #   args:
+            #     redis-rate-limiter.replenishRate: 10
+            #     redis-rate-limiter.burstCapacity: 20
+            #     key-resolver: "#{@userKeyResolver}" # Bean for resolving user key for rate limiting
+  # Security config for Gateway to act as an OAuth2 Client (for TokenRelay) and Resource Server (to validate incoming token)
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak: # Matches registration-id below
+            issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/test-realm}
+        registration:
+          keycloak: # This registration ID can be used by TokenRelay
+            provider: keycloak
+            client-id: ${GATEWAY_CLIENT_ID:gateway-client} # Client ID for the gateway itself in Keycloak
+            client-secret: ${GATEWAY_CLIENT_SECRET:your-gateway-client-secret}
+            authorization-grant-type: authorization_code # client_credentials # Or authorization_code if user interaction is involved at gateway
+            scope: openid # Or other scopes required by the gateway
+      # If the Gateway itself needs to validate tokens as a Resource Server (recommended)
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/test-realm}
+
+server:
+  port: 8888 # Gateway port, clients will connect here
+
+# If not using Spring Cloud Discovery Client, define the downstream service URL directly
+# document-management-api:
+#  url: http://localhost:8081 # Port of your DMS API
+
+# Logging
+logging:
+  level:
+    org.springframework:
+      cloud.gateway: TRACE # For debugging routes
+      http.server.reactive: DEBUG
+      web.reactive: DEBUG
+      security: DEBUG
+    reactor.netty.http.client: DEBUG # For debugging client requests
+
+
+# Resilience4j Circuit Breaker example config (optional)
+resilience4j:
+  circuitbreaker:
+    instances:
+      document-management-api-cb: # Name this to match filter config if used
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 5s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+  timelimiter:
+    instances:
+      document-management-api-tl:
+        timeoutDuration: 3s
+        cancelRunningFuture: true

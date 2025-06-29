@@ -1,0 +1,60 @@
+# src/main/resources/application.yml
+spring:
+  application:
+    name: document-management-api
+  threads:
+    virtual:
+      enabled: true
+  r2dbc:
+    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:dms_db}
+    username: ${DB_USER:dms_user}
+    password: ${DB_PASSWORD:dms_password}
+    initialization-mode: always
+    pool:
+      enabled: true
+      initial-size: 5
+      max-size: 10
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/test-realm} # e.g., http://localhost:8080/realms/test-realm
+          # jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/test-realm/protocol/openid-connect/certs} # Often derived from issuer-uri
+
+
+
+  sql:
+    init:
+      mode: always
+# Storage Configuration
+storage:
+  type: local # local or minio
+  local:
+    base-path: /tmp/dms-storage
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket-name: ${MINIO_BUCKET_NAME:dms-bucket}
+
+# Swagger / OpenAPI
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+# Logging for auditing (can be more sophisticated)
+logging:
+  level:
+    org.openfilz: DEBUG
+    org.springframework: INFO
+server:
+  port: 8081
+
+# Database schema initialization (e.g., Flyway or Liquibase if preferred)
+# For simple R2DBC, you might use an InitializingBean to create tables
+# Example:
+# spring.sql.init.mode=always
+# spring.sql.init.schema-locations=classpath:schema.sql
