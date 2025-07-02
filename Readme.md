@@ -1,58 +1,115 @@
-# Welcome to **_OpenFilz_** Document Management - a Java API to manage files and folders.
+# 🚀 Discover the **_OpenFilz_** Document Management API: A Modern, Reactive, and Secure Powerhouse 🚀
 
-## General concepts
-A file can belong to zero or one folder.
-Folders structure are hierarchical : a folder can belong to zero or one parent folder.
-All actions can be performed using the Rest API exposed by the Spring Boot Backend.
+Welcome to the next generation of document management. This isn't just another file storage API; it's a meticulously crafted, high-performance system designed for scalability, security, and a stellar developer experience. It provides a robust, centralized solution to handle all your application's document needs.
 
-The possible actions are the following :
-- Create a folder providing optionnaly the ID of the parent folder inside which the new folder has to be created. If no parent folder ID is provided, then the new folder is created at the root of the hierarchy.
-- Move a set of files into an existing folder, providing an array of the IDs of the files to be moved and the ID of the target folder
-- Copy a set of files into an existing folder, providing an array of the IDs of the files to be copied and the ID of the target folder
-- Move a set of folders (and their contents) into an existing folder, providing an array of the IDs of the folders to be moved and the ID of the target folder
-- Copy a set of folders (and their contents) into an existing folder, providing an array of the IDs of the folders to be copied and the ID of the target folder
-- Rename a file providing the ID of the file
-- Rename a folder providing the ID of the folder
-- Delete a set of files providing an array of the IDs of the files to be deleted : the files will be deleted from the physical storage (local filesystem or S3) and from the database
-- Delete a set of folders providing an array of the IDs of the folders to be deleted : the folders will be deleted from the physical storage (local filesystem or S3) and from the database
-- Upload a document with or without metada and return the generated document ID
-- Upload multiple documents with or without metada and return the generated document IDs
-- Replace a document (file or folder) and/or its metadata using the document ID and optionally the new metadata to be updated
-- Update metadata of a document (file or folder) providing the ID of the document and an array of the metadata to updated
-- Delete some metadata of a document (file or folder) providing the ID of the document and an array of the metadata keys to delete
-- Download one document using the document ID
-- Download multiple documents within a ZIP file, providing an array of document IDs
-- Search documents IDs using metadata
-- Search metadata using the document ID and (optionally) the metadata keys array to be retrieved : if no metadata keys array is provided, all metadata of the requested document are returned
+> Our philosophy is simple: **abstract complexity, empower developers.** We handle the intricate details of storage, security, and performance so you can focus on building amazing features.
 
-The document storage layer of the API is customizable : it can be a local filesystem or a MinIo S3 backend.
-The metadata are stored in a PostGreSQL Database in a JSONB column mapped to the "metadata" field of the "Document" entity.
+---
 
-The DTO must use Java record instead of pojos.
+## ✨ Key Features at a Glance ✨
 
-Use lombok annotations when applicable.
+### 1. Intuitive & Powerful File System Operations
 
-The Rest APIs must be implemented using Spring Webflux, and all code must be reactive : from the API (with WebFlux) to the Database (using R2DBC).
+Manage your digital assets with the ease of a local file system but with the power of a distributed, cloud-native application.
 
-When an endpoint uses a service that request access to the storage layer, the actions must be processed in the following order : 
-1. Storage layer processing
-2. Database processing to store document information and metadata
-3. Audit of the action performed (audit trail is stored in the database)
+*   📂 **Hierarchical Folder Management:** Create an infinite folder structure to perfectly organize your data. Simply provide a `parentId` to nest folders, or omit it to create them at the root level.
+*   💨 **Atomic Bulk Operations:** Why make a thousand calls when one will do? Move, copy, or delete entire sets of files and folders in a **single, efficient API call**. The API handles the complexity of processing these operations reliably.
+*   🔄 **Recursive Actions:** When you move or copy a folder, its entire contents—including all subfolders and files—are moved or copied with it, maintaining the integrity of your hierarchy.
+*   ✏️ **Seamless Renaming:** Rename any file or folder instantly with a simple `PUT` request. Thanks to our intelligent storage design, renaming a folder with thousands of files is a near-instant metadata update, not a costly storage operation.
 
-To avoid complex management of file & folders names and hierarchy : decision has been taken to store on the storage layer only files, not folders. Folders are created only in the database and files location within folders is defined in the database.
+### 2. The Power of Smart, Flexible Metadata
 
-All endpoints of the document management API must be self-documented using swagger UI and unit tests using Junit must cover all source code.
+Unleash the true potential of your documents by enriching them with meaningful data. Our metadata engine is built for flexibility and powerful querying.
 
-The spring cloud gateway will receive all client requests and has the following roles :
-1. it is the only central endpoint that listen for the client requests
-2. it manages authentication : it is linked to a keycloak server (autorization server and identity povider) that will generate or validate the JWT token needed to connect the document management API
-3. if the token is valid, the api gateway redirect all incoming client requests to the document management API
+*   🗂️ **Dynamic Metadata on Upload:** Attach any custom metadata as a simple JSON object during single or multiple file uploads.
+*   🔧 **Granular Metadata Control:**
+    *   **Update:** Add or modify specific key-value pairs without touching the rest of the metadata.
+    *   **Replace:** Completely swap out a document's old metadata for a new set.
+    *   **Delete:** Precisely remove specific metadata keys you no longer need.
+*   🔍 **Advanced Metadata Search:** This is the API's superpower!
+    *   **Find Documents by Content:** Retrieve a list of all document IDs that match a specific set of metadata criteria (e.g., `{"customerId": "123", "status": "approved"}`).
+    *   **Query Specific Keys:** Fetch only the metadata fields you need for a given document, minimizing payload size and improving performance.
 
-At each request to any endpoint of the document api, the JWT token must be validated by the API using keycloak validation endpoint.
+### 3. Efficient & Convenient Data Transfer
 
-All actions must be audited : 
-- Retrieve User Principal from JWT token
-- Trace all Write accesses to the file storage layer (write accesses on the filesystem or S3)
-- Trace all Write accesses to the database layer
+Getting data in and out of the system is designed to be as smooth as possible.
 
+*   📤 **Bulk Uploads:** Upload hundreds of files in a single `multipart/form-data` request, each with its own optional metadata and target folder.
+*   📥 **ZIP Downloads:** Retrieve multiple documents at once as a single, conveniently packaged `.zip` archive. Just provide an array of document IDs, and the API does the rest.
 
+---
+
+## 🛠️ Under the Hood: An Architecture Built for the Future 🛠️
+
+The "cool" features on the surface are powered by a modern, robust, and thoughtfully designed architecture.
+
+### A Fully Reactive Core
+The entire system is built on a non-blocking, reactive stack using **Spring WebFlux** and **R2DBC**.
+
+*   **What this means for you:**
+    *   **Blazing-Fast Performance:** Handles massive concurrency with a small number of threads, leading to lower memory consumption and higher throughput.
+    *   **Extreme Scalability:** Perfectly suited for microservices architectures and scales horizontally with ease.
+    *   **End-to-End Reactivity:** From the API endpoint to the database call, the entire request lifecycle is asynchronous, ensuring your application remains responsive under heavy load.
+
+### Intelligent Storage Abstraction
+We separate the logical hierarchy from the physical storage, which provides immense flexibility.
+
+*   **Virtual Folders:** Folders exist only as metadata in the **PostgreSQL database**. On the storage layer (**Local Filesystem or S3**), we only store files.
+*   **The Benefit:** Operations like moving a file or renaming a folder are simply fast metadata updates in the database. There's no need for slow, costly file system moves or re-writes.
+*   **Pluggable Backend:** The storage layer is an interface, allowing you to switch between a local filesystem for development and a **MinIO/S3** backend for production without changing a single line of your application code.
+
+### A Dream for Developers
+We believe a great API should be a joy to use.
+
+*   📝 **Modern Java:** We leverage **Java Records** for clean, immutable, and boilerplate-free Data Transfer Objects (DTOs), further streamlined with **Lombok** annotations.
+*   📖 **Self-Documenting:** All endpoints are fully documented using OpenAPI (Swagger), providing a clear, interactive contract for developers to work with.
+*   ✅ **Tested & Reliable:** A comprehensive suite of **JUnit** tests ensures the codebase is stable, reliable, and behaves as expected.
+
+---
+
+## 🛡️ Ironclad Security & Comprehensive Auditing 🛡️
+
+Security isn't an afterthought; it's a core principle of the API's design.
+
+### Centralized, Gateway-Powered Security
+The **Spring Cloud Gateway** acts as a fortified front door for the entire system.
+
+1.  **Single Point of Entry:** Clients interact only with the gateway, never directly with the API.
+2.  **Authentication & Authorization:** The gateway integrates with **Keycloak** to enforce authentication. It validates the JWT token on every incoming request.
+3.  **Secure Routing:** Only valid, authenticated requests are routed to the Document Management API.
+4.  **Defense in Depth:** The API itself re-validates the JWT token, ensuring that it cannot be accessed without proper credentials, even within the internal network.
+
+### Every Action is Accounted For
+A complete, immutable **audit trail** is generated for every write operation and stored securely in the database.
+
+*   **Who:** The user's principal is extracted from the JWT token.
+*   **What:** The action performed (e.g., `FILE_UPLOAD`, `FOLDER_DELETE`).
+*   **When:** A precise timestamp for the event.
+*   **Where:** Traces all writes to both the storage layer (S3/filesystem) and the database.
+
+This provides complete visibility and accountability for every change made in the system.
+
+### Request Flow at a Glance
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant GW as Spring Cloud Gateway
+    participant KC as Keycloak
+    participant API as Document Mgmt API
+    participant S as Storage (S3/FS)
+    participant DB as PostgreSQL DB
+
+    C->>+GW: Request with JWT
+    GW->>+KC: Validate JWT
+    KC-->>-GW: Token OK
+    GW->>+API: Forward Request
+    API->>S: 1. Perform Storage Action
+    S-->>API: Success
+    API->>DB: 2. Update Metadata (JSONB)
+    DB-->>API: Success
+    API->>DB: 3. Write Audit Trail
+    DB-->>API: Success
+    API-->>-GW: Response
+    GW-->>-C: Final Response
+```
