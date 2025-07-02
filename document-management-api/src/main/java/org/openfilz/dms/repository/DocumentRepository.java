@@ -33,10 +33,71 @@ public interface DocumentRepository extends ReactiveCrudRepository<Document, UUI
     @Query("SELECT id, type, name FROM documents WHERE parent_id is null")
     Flux<FolderElementInfo> listDocumentInfoAtRootLevel();
 
+    @Query("SELECT id, type, name FROM documents WHERE parent_id is null and type = :type")
+    Flux<FolderElementInfo> listDocumentInfoAtRootLevel(DocumentType type);
 
-    @Query("SELECT storage_path from documents where id = :id")
-    Mono<String> getStoragePathById(UUID id);
-    
+    @Query("SELECT id FROM documents WHERE parent_id is null and type = :type")
+    Flux<UUID> listDocumentIdsAtRootLevel(DocumentType type);
+
+    @Query("SELECT id FROM documents WHERE parent_id is null and type = :type and metadata @> :criteria::jsonb")
+    Flux<UUID> listDocumentIdsAtRootLevelWithMetadata(DocumentType type, @Param("criteria") String criteriaJson);
+
+    @Query("SELECT id FROM documents WHERE type = :type")
+    Flux<UUID> listDocumentIds(DocumentType type);
+
+    @Query("SELECT id FROM documents WHERE type = :type and metadata @> :criteria::jsonb")
+    Flux<UUID> listDocumentIdsWithMetadata(DocumentType type, @Param("criteria") String criteriaJson);
+
+    @Query("SELECT id FROM documents WHERE parent_id is null")
+    Flux<UUID> listDocumentIdsAtRootLevel();
+
+    @Query("SELECT id FROM documents WHERE parent_id is null and name = :name")
+    Flux<UUID> listDocumentIdsWithNameAtRootLevel(String name);
+
+    @Query("SELECT id FROM documents WHERE parent_id is null and name = :name and metadata @> :criteria::jsonb")
+    Flux<UUID> listDocumentIdsWithNameAtRootLevelWithMetadata(String name, @Param("criteria") String criteriaJson);
+
+    @Query("SELECT id FROM documents WHERE parent_id is null and name = :name and type = :type")
+    Flux<UUID> listDocumentIdsWithNameAndTypeAtRootLevel(String name, DocumentType type);
+
+    @Query("SELECT id FROM documents WHERE parent_id is null and name = :name and type = :type and metadata @> :criteria::jsonb")
+    Flux<UUID> listDocumentIdsWithNameAndTypeAndMetadataAtRootLevel(String name, DocumentType type, @Param("criteria") String criteriaJson);
+
+
+    @Query("SELECT id FROM documents WHERE name = :name")
+    Flux<UUID> listDocumentIdsWithName(String name);
+
+    @Query("SELECT id FROM documents WHERE name = :name and metadata @> :criteria::jsonb")
+    Flux<UUID> listDocumentIdsWithNameWithMetadata(String name, @Param("criteria") String criteriaJson);
+
+    @Query("SELECT id FROM documents WHERE name = :name and type = :type")
+    Flux<UUID> listDocumentIdsWithNameAndType(String name, DocumentType type);
+
+    @Query("SELECT id FROM documents WHERE name = :name and type = :type and metadata @> :criteria::jsonb")
+    Flux<UUID> listDocumentIdsWithNameAndTypeAndMetadata(String name, DocumentType type, @Param("criteria") String criteriaJson);
+
+    @Query("SELECT id FROM documents WHERE parent_id = :parentId")
+    Flux<UUID> listDocumentIds(UUID parentId);
+
+    @Query("SELECT id FROM documents WHERE parent_id = :parentId and type = :type")
+    Flux<UUID> listDocumentIdsWithType(UUID parentId, DocumentType type);
+
+    @Query("SELECT id FROM documents WHERE parent_id = :parentId and type = :type and metadata @> :criteria::jsonb")
+    Flux<UUID> listDocumentIdsWithTypeWithMetadata(UUID parentId, DocumentType type, @Param("criteria") String criteriaJson);
+
+    @Query("SELECT id FROM documents WHERE parent_id = :parentId and name = :name")
+    Flux<UUID> listDocumentIdsWithName(UUID parentId, String name);
+
+    @Query("SELECT id FROM documents WHERE parent_id = :parentId and name = :name and metadata @> :criteria::jsonb")
+    Flux<UUID> listDocumentIdsWithNameWithMetadata(UUID parentId, String name, @Param("criteria") String criteriaJson);
+
+    @Query("SELECT id FROM documents WHERE parent_id = :parentId and name = :name and type = :type")
+    Flux<UUID> listDocumentIdsWithNameAndType(UUID parentId, String name, DocumentType type);
+
+    @Query("SELECT id FROM documents WHERE parent_id = :parentId and name = :name and type = :type and metadata @> :criteria::jsonb")
+    Flux<UUID> listDocumentIdsWithNameAndTypeAndMetadata(UUID parentId, String name, DocumentType type, @Param("criteria") String criteriaJson);
+
+
     /*@Query("UPDATE documents SET parent_id = :newParentId, updated_at = CURRENT_TIMESTAMP, updated_by = :updatedBy WHERE id = :id")
     Mono<Void> updateParentId(UUID id, UUID newParentId, String updatedBy);
 

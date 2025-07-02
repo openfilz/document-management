@@ -58,5 +58,5 @@ public interface DocumentService {
 
     Mono<DocumentInfo> getDocumentInfo(UUID documentId, Boolean withMetadata, Authentication authentication);
 
-    Flux<FolderElementInfo> listFolderInfo(UUID folderId, Authentication authentication);
+    Flux<FolderElementInfo> listFolderInfo(UUID folderId, Boolean onlyFiles, Boolean onlyFolders, Authentication authentication);
 }

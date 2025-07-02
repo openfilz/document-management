@@ -67,7 +67,9 @@ public class FolderController {
                     "(no recursive list, just the flat list of objects at the root level of a folder)")
     public Flux<FolderElementInfo> listFolder(
             @RequestParam(required = false) @Parameter(description = "if null, empty or not provided, then lists the content of the root folder") UUID folderId,
+            @RequestParam(required = false, defaultValue = "false") @Parameter(description = "if true, only files are listed") Boolean onlyFiles,
+            @RequestParam(required = false, defaultValue = "false") @Parameter(description = "if true, only folders are listed") Boolean onlyFolders,
             Authentication authentication) {
-        return documentService.listFolderInfo(folderId, authentication);
+        return documentService.listFolderInfo(folderId, onlyFiles, onlyFolders, authentication);
     }
 }

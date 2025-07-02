@@ -78,17 +78,15 @@ public class DocumentServiceImpl implements DocumentService {
                     if (exists) {
                         return Mono.error(new DuplicateNameException(FOLDER, request.name()));
                     }
-                    Document folder = Document.builder()
-                            .name(request.name())
-                            .type(DocumentType.FOLDER)
-                            .parentId(request.parentId())
-                            .metadata(folderMetadata == null ? jsonUtils.emptyJson() : folderMetadata) // Empty JSON object
-                            .createdAt(OffsetDateTime.now())
-                            .updatedAt(OffsetDateTime.now())
-                            .createdBy(username)
-                            .updatedBy(username)
-                            .build();
-                    return documentRepository.save(folder);
+                    if(request.parentId() != null) {
+                        return documentRepository.existsByIdAndType(request.parentId(), FOLDER).flatMap(folderExists->{
+                           if(!folderExists) {
+                               return Mono.error(new DocumentNotFoundException(FOLDER, request.parentId()));
+                           }
+                           return saveFolderInRepository(request, username, folderMetadata);
+                        });
+                    }
+                    return saveFolderInRepository(request, username, folderMetadata);
                 }).flatMap(savedFolder -> {
                     if (auditDetails == null) {
                         return auditService.logAction(username, copy ? "COPY_FOLDER" : "CREATE_FOLDER", "FOLDER", savedFolder.getId(), request)
@@ -100,10 +98,28 @@ public class DocumentServiceImpl implements DocumentService {
 
     }
 
+    private Mono<Document> saveFolderInRepository(CreateFolderRequest request, String username, Json folderMetadata) {
+        Document folder = Document.builder()
+                .name(request.name())
+                .type(DocumentType.FOLDER)
+                .parentId(request.parentId())
+                .metadata(folderMetadata == null ? jsonUtils.emptyJson() : folderMetadata) // Empty JSON object
+                .createdAt(OffsetDateTime.now())
+                .updatedAt(OffsetDateTime.now())
+                .createdBy(username)
+                .updatedBy(username)
+                .build();
+        return documentRepository.save(folder);
+    }
+
     private Mono<Boolean> documentExists(String documentName, UUID parentFolderId) {
         return parentFolderId == null ?
-                documentRepository.existsByNameAndParentIdIsNull(documentName) :
+                documentExistsAtRootLevel(documentName) :
                 documentRepository.existsByNameAndParentId(documentName, parentFolderId);
+    }
+
+    private Mono<Boolean> documentExistsAtRootLevel(String documentName) {
+        return documentRepository.existsByNameAndParentIdIsNull(documentName);
     }
 
     @Override
@@ -763,15 +779,53 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     public Flux<UUID> searchDocumentIdsByMetadata(SearchByMetadataRequest request, Authentication auth) {
         return getConnectedUser(auth).flatMapMany(username -> {
-            if (request.metadataCriteria() == null || request.metadataCriteria().isEmpty()) {
-                return Flux.error(new IllegalArgumentException("Metadata criteria cannot be empty."));
+            boolean noMetadataCriteria = request.metadataCriteria() == null || request.metadataCriteria().isEmpty();
+            boolean noNameCriteria = request.name() == null || request.name().isEmpty();
+            boolean noTypeCriteria = request.type() == null;
+            boolean noParentFolderCriteria = request.parentFolderId() == null;
+            boolean noRootOnlyCriteria = request.rootOnly() == null;
+            if(!noParentFolderCriteria && (!noRootOnlyCriteria && request.rootOnly())) {
+                return Flux.error(new IllegalArgumentException("Impossible to specify simultaneously rootOnly 'true' and parentFolderId not null"));
+            }
+            if(noNameCriteria
+                    && noTypeCriteria
+                    && noMetadataCriteria) {
+                return Flux.error(new IllegalArgumentException("All criteria cannot be empty."));
             }
             try {
+                if(noMetadataCriteria) {
+                    //Only type criteria
+                    if(noNameCriteria) {
+                        return !noRootOnlyCriteria && request.rootOnly() ? documentRepository.listDocumentIdsAtRootLevel(request.type())
+                                : noParentFolderCriteria ? documentRepository.listDocumentIds(request.type()) : documentRepository.listDocumentIdsWithType(request.parentFolderId(), request.type());
+                    }
+                    //Only name criteria
+                    if(noTypeCriteria) {
+                        return !noRootOnlyCriteria && request.rootOnly() ? documentRepository.listDocumentIdsWithNameAtRootLevel(request.name())
+                                : noParentFolderCriteria ? documentRepository.listDocumentIdsWithName(request.name()) : documentRepository.listDocumentIdsWithName(request.parentFolderId(), request.name());
+                    }
+                    //Type and name criteria
+                    return !noRootOnlyCriteria && request.rootOnly() ? documentRepository.listDocumentIdsWithNameAndTypeAtRootLevel(request.name(), request.type())
+                            : noParentFolderCriteria ? documentRepository.listDocumentIdsWithNameAndType(request.name(), request.type()) : documentRepository.listDocumentIdsWithNameAndType(request.parentFolderId(), request.name(), request.type());
+                }
+                //Metadata criteria not empty
                 // R2DBC JSONB query: field @> '{"key": "value"}'
                 // For multiple criteria, build a JSON object like: {"key1": "value1", "key2": "value2"}
                 String criteriaJson = objectMapper.writeValueAsString(request.metadataCriteria());
-                return documentRepository.findByMetadata(criteriaJson)
-                        .map(Document::getId);
+                //Only type criteria
+                if(noNameCriteria) {
+                    return !noRootOnlyCriteria && request.rootOnly() ? documentRepository.listDocumentIdsAtRootLevelWithMetadata(request.type(), criteriaJson)
+                            : noParentFolderCriteria ? documentRepository.listDocumentIdsWithMetadata(request.type(), criteriaJson) : documentRepository.listDocumentIdsWithTypeWithMetadata(request.parentFolderId(), request.type(), criteriaJson);
+                }
+                //Only name criteria
+                if(noTypeCriteria) {
+                    return !noRootOnlyCriteria && request.rootOnly() ? documentRepository.listDocumentIdsWithNameAtRootLevelWithMetadata(request.name(), criteriaJson)
+                            : noParentFolderCriteria ? documentRepository.listDocumentIdsWithNameWithMetadata(request.name(), criteriaJson) : documentRepository.listDocumentIdsWithNameWithMetadata(request.parentFolderId(), request.name(), criteriaJson);
+                }
+                //Type and name criteria
+                return !noRootOnlyCriteria && request.rootOnly() ? documentRepository.listDocumentIdsWithNameAndTypeAndMetadataAtRootLevel(request.name(), request.type(), criteriaJson)
+                        : noParentFolderCriteria ? documentRepository.listDocumentIdsWithNameAndTypeAndMetadata(request.name(), request.type(), criteriaJson) : documentRepository.listDocumentIdsWithNameAndTypeAndMetadata(request.parentFolderId(), request.name(), request.type(), criteriaJson);
+
             } catch (JsonProcessingException e) {
                 return Flux.error(new RuntimeException("Error processing metadata criteria for search.", e));
             }
@@ -822,8 +876,16 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     @Override
-    public Flux<FolderElementInfo> listFolderInfo(UUID folderId, Authentication authentication) {
+    public Flux<FolderElementInfo> listFolderInfo(UUID folderId, Boolean onlyFiles, Boolean onlyFolders, Authentication authentication) {
+        if(onlyFiles != null && onlyFiles && onlyFolders != null && onlyFolders) {
+            return Flux.error(new IllegalArgumentException("onlyFiles and onlyFolders cannot be true in simultaneously"));
+        }
         if(folderId == null) {
+            if(onlyFiles != null && onlyFiles) {
+                return documentRepository.listDocumentInfoAtRootLevel(FILE);
+            } else  if(onlyFolders != null && onlyFolders) {
+                return documentRepository.listDocumentInfoAtRootLevel(FOLDER);
+            }
             return documentRepository.listDocumentInfoAtRootLevel();
         }
         return documentRepository.existsByIdAndType(folderId, DocumentType.FOLDER)
