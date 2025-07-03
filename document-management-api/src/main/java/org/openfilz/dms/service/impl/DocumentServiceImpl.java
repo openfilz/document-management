@@ -728,11 +728,9 @@ public class DocumentServiceImpl implements DocumentService {
                 return Mono.error(new IllegalArgumentException("Document IDs list cannot be empty."));
             }
 
-            // Fetch all document details first to ensure they exist and are files
             Flux<Document> documentsToZipFlux = documentRepository.findByIdIn(documentIds)
                     .filter(doc -> doc.getType() == FILE); // Only zip files
 
-           // documentsToZipFlux.flatMapIterable(doc-> addT)
             return documentsToZipFlux.collectList().flatMap(docs -> {
                 if (docs.isEmpty()) {
                     return Mono.error(new DocumentNotFoundException("No valid files found for the provided IDs to zip."));
@@ -741,42 +739,40 @@ public class DocumentServiceImpl implements DocumentService {
                     log.warn("Some requested documents were not files or not found. Zipping available files.");
                 }
 
-                // Use a Schedulers.boundedElastic() for blocking I/O operations for zipping
-                return Mono.fromCallable(() -> {
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    try (ZipArchiveOutputStream zos = new ZipArchiveOutputStream(baos)) {
-                        return Flux.fromIterable(docs)
-                                .flatMapSequential(doc->addToZip(doc, zos))
-                                .then(Mono.just(new ByteArrayResource(baos.toByteArray()))).block();
-                    } catch (IOException e) {
-                        log.error("Error creating zip file", e);
-                        throw new RuntimeException("Error creating zip file", e);
-                    }
-                }).subscribeOn(Schedulers.boundedElastic());
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                ZipArchiveOutputStream zos = new ZipArchiveOutputStream(baos);
+
+                return Flux.fromIterable(docs)
+                        .concatMap(doc -> addToZip(doc, zos))
+                        .then(Mono.fromCallable(() -> {
+                            zos.close();
+                            return new ByteArrayResource(baos.toByteArray());
+                        }))
+                        .subscribeOn(Schedulers.boundedElastic());
             });
         });
     }
 
-    private Mono<String> addToZip(Document doc, ZipArchiveOutputStream zos) {
+    private Mono<Void> addToZip(Document doc, ZipArchiveOutputStream zos) {
         return storageService.loadFile(doc.getStoragePath())
                 .flatMap(resource -> {
                     if (resource == null || !resource.exists()) {
                         log.warn("Skipping missing file in zip: {}", doc.getName());
-                    } else {
-                        try {
-                            ZipArchiveEntry zipEntry = new ZipArchiveEntry(doc.getName()); // Use document name for entry
-                            zipEntry.setSize(doc.getSize() != null ? doc.getSize() : resource.contentLength()); // Set size if available
-                            zos.putArchiveEntry(zipEntry);
-                            try (InputStream is = resource.getInputStream()) {
-                                org.apache.commons.io.IOUtils.copy(is, zos);
-                            }
-                            zos.closeArchiveEntry();
-                        } catch (IOException ioe) {
-                            return Mono.error(new StorageException(ioe.getMessage()));
-                        }
+                        return Mono.empty();
                     }
-                    return Mono.just(doc.getStoragePath());
-                } );
+                    try {
+                        ZipArchiveEntry zipEntry = new ZipArchiveEntry(doc.getName());
+                        zipEntry.setSize(doc.getSize() != null ? doc.getSize() : resource.contentLength());
+                        zos.putArchiveEntry(zipEntry);
+                        try (InputStream is = resource.getInputStream()) {
+                            org.apache.commons.io.IOUtils.copy(is, zos);
+                        }
+                        zos.closeArchiveEntry();
+                        return Mono.empty();
+                    } catch (IOException ioe) {
+                        return Mono.error(new StorageException(ioe.getMessage()));
+                    }
+                });
     }
 
 
