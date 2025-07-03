@@ -732,6 +732,7 @@ public class DocumentServiceImpl implements DocumentService {
             Flux<Document> documentsToZipFlux = documentRepository.findByIdIn(documentIds)
                     .filter(doc -> doc.getType() == FILE); // Only zip files
 
+           // documentsToZipFlux.flatMapIterable(doc-> addT)
             return documentsToZipFlux.collectList().flatMap(docs -> {
                 if (docs.isEmpty()) {
                     return Mono.error(new DocumentNotFoundException("No valid files found for the provided IDs to zip."));
@@ -744,35 +745,38 @@ public class DocumentServiceImpl implements DocumentService {
                 return Mono.fromCallable(() -> {
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
                     try (ZipArchiveOutputStream zos = new ZipArchiveOutputStream(baos)) {
-                        for (Document doc : docs) {
-                            storageService.loadFile(doc.getStoragePath())
-                                    .flatMap(resource -> {
-                                        if (resource == null || !resource.exists()) {
-                                            log.warn("Skipping missing file in zip: {}", doc.getName());
-                                        } else {
-                                            try {
-                                                ZipArchiveEntry zipEntry = new ZipArchiveEntry(doc.getName()); // Use document name for entry
-                                                zipEntry.setSize(doc.getSize() != null ? doc.getSize() : resource.contentLength()); // Set size if available
-                                                zos.putArchiveEntry(zipEntry);
-                                                try (InputStream is = resource.getInputStream()) {
-                                                    org.apache.commons.io.IOUtils.copy(is, zos);
-                                                }
-                                                zos.closeArchiveEntry();
-                                            } catch (IOException ioe) {
-                                                return Mono.error(new StorageException(ioe.getMessage()));
-                                            }
-                                        }
-                                        return Mono.just(doc.getStoragePath());
-                                    } );
-                        }
+                        return Flux.fromIterable(docs)
+                                .flatMapSequential(doc->addToZip(doc, zos))
+                                .then(Mono.just(new ByteArrayResource(baos.toByteArray()))).block();
                     } catch (IOException e) {
                         log.error("Error creating zip file", e);
                         throw new RuntimeException("Error creating zip file", e);
                     }
-                    return new ByteArrayResource(baos.toByteArray());
                 }).subscribeOn(Schedulers.boundedElastic());
             });
         });
+    }
+
+    private Mono<String> addToZip(Document doc, ZipArchiveOutputStream zos) {
+        return storageService.loadFile(doc.getStoragePath())
+                .flatMap(resource -> {
+                    if (resource == null || !resource.exists()) {
+                        log.warn("Skipping missing file in zip: {}", doc.getName());
+                    } else {
+                        try {
+                            ZipArchiveEntry zipEntry = new ZipArchiveEntry(doc.getName()); // Use document name for entry
+                            zipEntry.setSize(doc.getSize() != null ? doc.getSize() : resource.contentLength()); // Set size if available
+                            zos.putArchiveEntry(zipEntry);
+                            try (InputStream is = resource.getInputStream()) {
+                                org.apache.commons.io.IOUtils.copy(is, zos);
+                            }
+                            zos.closeArchiveEntry();
+                        } catch (IOException ioe) {
+                            return Mono.error(new StorageException(ioe.getMessage()));
+                        }
+                    }
+                    return Mono.just(doc.getStoragePath());
+                } );
     }
 
 
