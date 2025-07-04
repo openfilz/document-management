@@ -1,8 +1,0 @@
-apiVersion: v1
-name: document-management-api-pod
-version: 1.0.0
-appVersion: 0.0.1-SNAPSHOT
-maintainers: []
-sources:
-keywords: 
-  - document-management-api-pod
