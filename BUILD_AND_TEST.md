@@ -7,8 +7,7 @@ This document provides instructions on how to build, configure, and test the app
 
 *   **Java 24**
 *   **Maven 3.x**
-*   **Docker** (for running PostgreSQL, MinIO, and Keycloak)
-*   **Docker Compose**
+*   For running PostgreSQL, MinIO, and Keycloak : **Docker** and   **Docker Compose** or use local installations if you don't have Docker  
 
 ## Building the Application
 
@@ -27,7 +26,8 @@ mvn clean install -pl document-management-api -am
 
 ## Local Testing
 
-For local testing, you will need to run PostgreSQL, MinIO, and Keycloak. A `docker-compose.yml` file is provided in the `helm/kube-deploy` directory for this purpose.
+For local testing, you will need to run PostgreSQL, MinIO, and Keycloak.
+You can use Docker for that : a `docker-compose.yml` file is provided in the `helm/kube-deploy` directory for this purpose.
 
 ### 1. Start Dependent Services
 
