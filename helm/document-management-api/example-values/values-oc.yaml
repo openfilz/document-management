@@ -2,7 +2,8 @@
 
 image:
   registry: nexus.oddo-bhf.com:8443
-  pullSecrets: imagePullSecrets
+  pullSecrets:
+    - name: imagePullSecrets
 
 # -- Enable OpenShift-specific resources and logic.
 openshift:
