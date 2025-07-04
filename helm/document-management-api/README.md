@@ -98,7 +98,7 @@ The following table lists the configurable parameters of the Document Management
 | `image.pullSecrets` | Secrets for pulling images from a private registry. | `[]` |
 | `api.port` | The container port the application listens on. | `9984` |
 | `spring.activeProfile`| The active Spring profile (e.g., kube, dev). | `"kube"` |
-| `database.host` | The hostname of the database server. | `"ged-db-rw.ged-lab.svc.cluster.local"` |
+| `database.host` | The hostname of the database server. | `"localhost"` |
 | `database.port` | The port of the database server. | `5432` |
 | `database.name` | The name of the database. | `"dms-db"` |
 | `database.existingSecret`| Name of an existing Secret with DB credentials (keys: `user`, `password`). | `""` |

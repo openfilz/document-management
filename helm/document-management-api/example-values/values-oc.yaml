@@ -1,5 +1,9 @@
 # Example values for an OpenShift deployment
 
+image:
+  registry: nexus.oddo-bhf.com:8443
+  pullSecrets: imagePullSecrets
+
 # -- Enable OpenShift-specific resources and logic.
 openshift:
   enabled: true
@@ -24,13 +28,10 @@ ingress:
 persistence:
   enabled: true
   size: 1Gi
-  # -- Specify a StorageClass available in your OpenShift cluster (e.g., gp2, thin-csi).
-  storageClass: "thin-csi"
 
 # -- Database password should be set via --set or a sealed secret in production.
 database:
-  createPassword: "UseAStrongPasswordHere"
-
+  host: ged-db-rw.ged-lab.svc.cluster.local
 # -- Remaining values can inherit from the defaults in values.yaml or be set as needed.
 # replicaCount: 2
 # image:

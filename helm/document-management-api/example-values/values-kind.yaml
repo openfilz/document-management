@@ -6,22 +6,22 @@ openshift:
   route:
     enabled: false
 
+image:
+  registry: "localhost:5001"
+
 # -- Enable and configure the Kubernetes Ingress resource.
 ingress:
   enabled: true
 persistence:
   enabled: true
   size: 1Gi
-  # -- Specify a StorageClass available in your cluster (e.g., standard, gp2).
-  # If using a manually created PV, this should match the PV's storageClassName.
-  storageClass: "standard"
-  # -- The hostPath is only relevant if you intend to create a manual PV.
-  # For dynamic provisioners, this field is ignored.
-  hostPath: "/mnt/data/dms-storage"
 
-# -- Database password should be set via --set or a secret in production.
+# -- For test purposes only. Database password should be set via --set or a secret in production.
 database:
-  createPassword: "UseAStrongPasswordHere"
+  host: dms-postgres-postgresql
+  createUser: dms_user
+  createPassword: dms_password
+  name: dms_db
 
 # -- Remaining values can inherit from the defaults in values.yaml or be set as needed.
 # replicaCount: 1
