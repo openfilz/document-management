@@ -23,7 +23,7 @@ import org.openfilz.dms.service.StorageService;
 import org.openfilz.dms.utils.JsonUtils;
 import org.openfilz.dms.utils.MapEntry;
 import org.openfilz.dms.utils.UserPrincipalExtractor;
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.codec.multipart.FilePart;
@@ -34,9 +34,10 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -728,28 +729,42 @@ public class DocumentServiceImpl implements DocumentService {
                 return Mono.error(new IllegalArgumentException("Document IDs list cannot be empty."));
             }
 
-            Flux<Document> documentsToZipFlux = documentRepository.findByIdIn(documentIds)
-                    .filter(doc -> doc.getType() == FILE); // Only zip files
+            try {
+                PipedInputStream pipedInputStream = new PipedInputStream();
+                PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
+                ZipArchiveOutputStream zos = new ZipArchiveOutputStream(pipedOutputStream);
 
-            return documentsToZipFlux.collectList().flatMap(docs -> {
-                if (docs.isEmpty()) {
-                    return Mono.error(new DocumentNotFoundException("No valid files found for the provided IDs to zip."));
-                }
-                if (docs.size() != documentIds.size()) {
-                    log.warn("Some requested documents were not files or not found. Zipping available files.");
-                }
-
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                ZipArchiveOutputStream zos = new ZipArchiveOutputStream(baos);
-
-                return Flux.fromIterable(docs)
-                        .concatMap(doc -> addToZip(doc, zos))
-                        .then(Mono.fromCallable(() -> {
+                documentRepository.findByIdIn(documentIds)
+                    .filter(doc -> doc.getType() == FILE)
+                    .collectList()
+                    .flatMap(docs -> {
+                        if (docs.isEmpty()) {
+                            return Mono.error(new DocumentNotFoundException("No valid files found for the provided IDs to zip."));
+                        }
+                        if (docs.size() != documentIds.size()) {
+                            log.warn("Some requested documents were not files or not found. Zipping available files.");
+                        }
+                        return Flux.fromIterable(docs)
+                            .concatMap(doc -> addToZip(doc, zos))
+                            .then();
+                    })
+                    .doOnTerminate(() -> {
+                        try {
                             zos.close();
-                            return new ByteArrayResource(baos.toByteArray());
-                        }))
-                        .subscribeOn(Schedulers.boundedElastic());
-            });
+                        } catch (IOException e) {
+                            log.error("Failed to close zip stream", e);
+                        }
+                    })
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .subscribe(
+                        null,
+                        error -> log.error("Error during zip creation", error)
+                    );
+
+                return Mono.just(new InputStreamResource(pipedInputStream));
+            } catch (IOException e) {
+                return Mono.error(new StorageException("Failed to create piped stream", e));
+            }
         });
     }
 
@@ -765,7 +780,7 @@ public class DocumentServiceImpl implements DocumentService {
                         zipEntry.setSize(doc.getSize() != null ? doc.getSize() : resource.contentLength());
                         zos.putArchiveEntry(zipEntry);
                         try (InputStream is = resource.getInputStream()) {
-                            org.apache.commons.io.IOUtils.copy(is, zos);
+                            is.transferTo(zos);
                         }
                         zos.closeArchiveEntry();
                         return Mono.empty();
