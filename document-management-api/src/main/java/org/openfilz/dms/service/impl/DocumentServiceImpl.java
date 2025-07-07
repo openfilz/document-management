@@ -748,13 +748,7 @@ public class DocumentServiceImpl implements DocumentService {
                             .concatMap(doc -> addToZip(doc, zos))
                             .then();
                     })
-                    .doOnTerminate(() -> {
-                        try {
-                            zos.close();
-                        } catch (IOException e) {
-                            log.error("Failed to close zip stream", e);
-                        }
-                    })
+                    .doOnTerminate(() -> closeOutputStream(zos))
                     .subscribeOn(Schedulers.boundedElastic())
                     .subscribe(
                         null,
@@ -766,6 +760,14 @@ public class DocumentServiceImpl implements DocumentService {
                 return Mono.error(new StorageException("Failed to create piped stream", e));
             }
         });
+    }
+
+    private static void closeOutputStream(ZipArchiveOutputStream zos) {
+        try {
+            zos.close();
+        } catch (IOException e) {
+            log.error("Failed to close zip stream", e);
+        }
     }
 
     private Mono<Void> addToZip(Document doc, ZipArchiveOutputStream zos) {

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.openfilz.dms.dto.*;
 import org.openfilz.dms.entity.Document;
@@ -469,14 +470,16 @@ class DocumentServiceImplTest {
     }
 
     @Test
-    void downloadMultipleDocumentsAsZip_success() {
+    void downloadMultipleDocumentsAsZip_success() throws InterruptedException {
         UUID docId1 = UUID.randomUUID();
         UUID docId2 = UUID.randomUUID();
         Document doc1 = Document.builder().id(docId1).type(DocumentType.FILE).name("file1.txt").storagePath("path1").build();
         Document doc2 = Document.builder().id(docId2).type(DocumentType.FILE).name("file2.txt").storagePath("path2").build();
 
         when(documentRepository.findByIdIn(List.of(docId1, docId2))).thenReturn(Flux.just(doc1, doc2));
-        doReturn(Mono.just(mock(Resource.class))).when(storageService).loadFile(anyString());
+        Resource resource = mock(Resource.class);
+        Mockito.lenient().doReturn(Mono.just(resource)).when(storageService).loadFile(anyString());
+        Mockito.lenient().when(resource.exists()).thenReturn(true);
 
         Mono<Resource> result = documentService.downloadMultipleDocumentsAsZip(List.of(docId1, docId2), mockAuthentication);
 
