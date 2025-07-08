@@ -914,9 +914,4 @@ public class DocumentServiceImpl implements DocumentService {
                 });
     }
 
-
-    // ... Other method implementations ...
-    // - copyFolders (recursive, complex)
-    // - uploadMultipleDocuments (handle multiple FileParts and corresponding metadata)
-
 }
