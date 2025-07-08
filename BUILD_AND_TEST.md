@@ -24,6 +24,16 @@ This will build both the `document-management-api` and `document-management-gate
 mvn clean install -pl document-management-api -am
 ```
 
+### Generating the Docker Image
+
+To generate the Docker image for the `document-management-api`, you can use the `kube` Maven profile. This profile uses the `jib-maven-plugin` to build the image.
+
+```bash
+mvn clean install -Pkube -pl document-management-api -am
+```
+
+This command will build the `document-management-api` module and create a Docker image with the name `localhost:5000/snapshots/document-management-api:1.0.0-SNAPSHOT`.
+
 ## Local Testing
 
 For local testing, you will need to run PostgreSQL, MinIO, and Keycloak.
