@@ -11,13 +11,6 @@ The Document Management Gateway serves as a critical security and routing layer 
 
 ## 🚀 Getting Started
 
-### Prerequisites
-
-- Java 17 or higher
-- Maven 3.6+
-- Running Keycloak instance
-- Document Management API running
-
 ### Configuration
 
 The gateway configuration is managed through `application.yml`. Key settings include:
