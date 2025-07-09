@@ -3,6 +3,7 @@ package org.openfilz.gateway.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.web.server.SecurityWebFilterChain;
@@ -31,10 +32,10 @@ public class GatewaySecurityConfig {
     @Bean
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
         http
-            .cors(ServerHttpSecurity.CorsSpec::disable)
             .csrf(ServerHttpSecurity.CsrfSpec::disable) // Standard for stateless APIs
             .authorizeExchange(exchange -> exchange
                 .pathMatchers(PUBLIC_PATHS).permitAll() // Public paths
+                .pathMatchers(HttpMethod.OPTIONS).permitAll()
                 .anyExchange().authenticated() // All other requests must be authenticated
             )
             // Configure OAuth2 Resource Server for JWT validation

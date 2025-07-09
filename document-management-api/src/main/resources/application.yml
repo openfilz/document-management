@@ -42,7 +42,7 @@ storage:
 # Swagger / OpenAPI
 springdoc:
   api-docs:
-    path: /dms-api/api-docs
+    path: /dms-api/v3/api-docs
   swagger-ui:
     path: /dms-api/swagger-ui.html
 
