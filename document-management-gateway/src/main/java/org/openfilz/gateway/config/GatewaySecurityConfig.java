@@ -20,10 +20,6 @@ public class GatewaySecurityConfig {
     // Define public paths that don't require authentication at the gateway level
     private static final String[] PUBLIC_PATHS = {
         "/actuator/**", // Allow actuator endpoint
-            "*/v3/api-docs/**",
-            "*/swagger-ui/**",
-            "*/swagger-ui.html",
-            "*/webjars/swagger-ui/**"
             // Add other public paths if needed, e.g., specific API docs for the gateway itself
         // Note: The downstream service (DMS API) will still enforce its own security for its Swagger UI.
     };
@@ -45,6 +41,5 @@ public class GatewaySecurityConfig {
             ;
         return http.build();
     }
-
 
 }

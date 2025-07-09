@@ -16,7 +16,7 @@ spring:
       max-size: 10
 
   security:
-    no-auth: true # No authentication required
+    no-auth: false # No authentication required
     oauth2:
       resourceserver:
         jwt:
@@ -40,6 +40,11 @@ storage:
     bucket-name: ${MINIO_BUCKET_NAME:dms-bucket}
 
 # Swagger / OpenAPI
+openapi:
+  service:
+    title: document-management-api
+    url: http://localhost:8888/dms-api
+    version: 1.0.0
 springdoc:
   api-docs:
     path: /dms-api/v3/api-docs
