@@ -4,24 +4,18 @@ spring:
     name: document-management-gateway
   cloud:
     gateway:
-      default-filters: # Default filters for all routes
-        - TokenRelay # If you want to propagate the JWT token to downstream services
-        # - Add other default filters like Retry, RateLimiter, etc.
-      routes:
-        - id: document-management-api-route
-          # uri: lb://document-management-api # If using service discovery (e.g., Eureka, Consul)
-          uri: http://localhost:8081 # If direct routing (replace document-management-api with actual service name if using discovery)
-          predicates:
-            - Path=/dms-api/** # All requests to /dms-api/... will be routed
-          filters:
-            - StripPrefix=1 # Strips /dms-api from the path before forwarding (e.g. /dms-api/api/v1/folders -> /api/v1/folders)
-            # You might want JWT validation here too, or rely on the resource server (DMS API) to do it.
-            # If gateway validates, it's defense in depth.
-            # - name: RequestRateLimiter
-            #   args:
-            #     redis-rate-limiter.replenishRate: 10
-            #     redis-rate-limiter.burstCapacity: 20
-            #     key-resolver: "#{@userKeyResolver}" # Bean for resolving user key for rate limiting
+      server:
+        webflux:
+          default-filters:
+            - TokenRelay # If you want to propagate the JWT token to downstream services
+                    # - Add other default filters like Retry, RateLimiter, etc.
+          routes:
+            - id: document-management-api-route
+            # uri: lb://document-management-api # If using service discovery (e.g., Eureka, Consul)
+              uri: http://localhost:8081 # If direct routing (replace document-management-api with actual service name if using discovery)
+              predicates:
+                - Path=/dms-api/** # All requests to /dms-api/... will be routed
+
   # Security config for Gateway to act as an OAuth2 Client (for TokenRelay) and Resource Server (to validate incoming token)
   security:
     oauth2:
@@ -30,7 +24,7 @@ spring:
           keycloak: # Matches registration-id below
             issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/test-realm}
         registration:
-          keycloak: # This registration ID can be used by TokenRelay
+          gateway-client: # This registration ID can be used by TokenRelay
             provider: keycloak
             client-id: ${GATEWAY_CLIENT_ID:gateway-client} # Client ID for the gateway itself in Keycloak
             client-secret: ${GATEWAY_CLIENT_SECRET:your-gateway-client-secret}
@@ -39,7 +33,8 @@ spring:
       # If the Gateway itself needs to validate tokens as a Resource Server (recommended)
       resourceserver:
         jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/test-realm}
+          jwk-set-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/test-realm}/protocol/openid-connect/certs
+          # issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/test-realm}
 
 server:
   port: 8888 # Gateway port, clients will connect here
@@ -52,7 +47,7 @@ server:
 logging:
   level:
     org.springframework:
-      cloud.gateway: TRACE # For debugging routes
+      cloud: TRACE # For debugging routes
       http.server.reactive: DEBUG
       web.reactive: DEBUG
       security: DEBUG

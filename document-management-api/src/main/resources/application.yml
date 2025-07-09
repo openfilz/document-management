@@ -16,6 +16,7 @@ spring:
       max-size: 10
 
   security:
+    no-auth: true # No authentication required
     oauth2:
       resourceserver:
         jwt:
@@ -41,15 +42,15 @@ storage:
 # Swagger / OpenAPI
 springdoc:
   api-docs:
-    path: /api-docs
+    path: /dms-api/api-docs
   swagger-ui:
-    path: /swagger-ui.html
+    path: /dms-api/swagger-ui.html
 
 # Logging for auditing (can be more sophisticated)
 logging:
   level:
     org.openfilz: DEBUG
-    org.springframework: INFO
+    org.springframework: DEBUG
 server:
   port: 8081
 
