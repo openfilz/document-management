@@ -16,6 +16,7 @@ spring:
       max-size: 10
 
   security:
+    no-auth: true # No authentication required
     oauth2:
       resourceserver:
         jwt:
@@ -39,17 +40,22 @@ storage:
     bucket-name: ${MINIO_BUCKET_NAME:dms-bucket}
 
 # Swagger / OpenAPI
+openapi:
+  service:
+    title: document-management-api
+    url: http://localhost:8888/dms-api
+    version: 1.0.0
 springdoc:
   api-docs:
-    path: /api-docs
+    path: /dms-api/v3/api-docs
   swagger-ui:
-    path: /swagger-ui.html
+    path: /dms-api/swagger-ui.html
 
 # Logging for auditing (can be more sophisticated)
 logging:
   level:
     org.openfilz: DEBUG
-    org.springframework: INFO
+    org.springframework: DEBUG
 server:
   port: 8081
 

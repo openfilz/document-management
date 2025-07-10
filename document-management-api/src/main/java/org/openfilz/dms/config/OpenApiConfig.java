@@ -7,9 +7,12 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
 
 @Configuration
 public class OpenApiConfig {
@@ -21,7 +24,9 @@ public class OpenApiConfig {
     private String keycloakIssuerUri; // e.g., http://localhost:8080/realms/test-realm
 
     @Bean
-    public OpenAPI customOpenAPI() {
+    public OpenAPI customOpenAPI(@Value("${openapi.service.title}") String serviceTitle,
+                                 @Value("${openapi.service.version}") String serviceVersion,
+                                 @Value("${openapi.service.url}") String url) {
         final String securitySchemeName = "keycloak_auth"; // Can be any name
 
         // Construct the OpenID Connect URL from the issuer URI
@@ -30,8 +35,9 @@ public class OpenApiConfig {
 
 
         return new OpenAPI()
-                .info(new Info().title(applicationName)
-                        .version("v1")
+                .servers(List.of(new Server().url(url)))
+                .info(new Info().title(serviceTitle)
+                        .version(serviceVersion)
                         .description("API for Document Management System")
                         .license(new License().name("Apache 2.0").url("http://springdoc.org")))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
@@ -45,4 +51,6 @@ public class OpenApiConfig {
                         )
                 );
     }
+
+
 }
