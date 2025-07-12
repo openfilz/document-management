@@ -292,7 +292,7 @@ class DocumentServiceImplTest {
 
         when(documentRepository.findById(fileId)).thenReturn(Mono.just(fileToCopy));
         when(documentRepository.findById(targetFolderId)).thenReturn(Mono.just(targetFolder));
-        when(documentRepository.existsByNameAndParentIdIsNull("file-to-copy")).thenReturn(Mono.just(false));
+        when(documentRepository.existsByNameAndParentId("file-to-copy", targetFolderId)).thenReturn(Mono.just(false));
         when(storageService.copyFile(anyString())).thenReturn(Mono.just("new-path"));
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(copiedFile));
         when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
