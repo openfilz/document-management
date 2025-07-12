@@ -23,8 +23,6 @@ spring:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/test-realm} # e.g., http://localhost:8080/realms/test-realm
           # jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/test-realm/protocol/openid-connect/certs} # Often derived from issuer-uri
 
-
-
   sql:
     init:
       mode: always
@@ -43,19 +41,19 @@ storage:
 openapi:
   service:
     title: document-management-api
-    url: http://localhost:8888/dms-api
+    url: http://localhost:8081/ # put http://localhost:8081/ for standalone usage & http://localhost:8888/dms-api if the document-management-gateway is used
     version: 1.0.0
 springdoc:
   api-docs:
-    path: /dms-api/v3/api-docs
+    path: /v3/api-docs # put /v3/api-docs for standalone usage & /dms-api/v3/api-docs if the document-management-gateway is used
   swagger-ui:
-    path: /dms-api/swagger-ui.html
+    path: /swagger-ui.html # put /swagger-ui.html for standalone usage & /dms-api/swagger-ui.html if the document-management-gateway is used
 
 # Logging for auditing (can be more sophisticated)
 logging:
   level:
     org.openfilz: DEBUG
-    org.springframework: DEBUG
+    # org.springframework: DEBUG
 server:
   port: 8081
 

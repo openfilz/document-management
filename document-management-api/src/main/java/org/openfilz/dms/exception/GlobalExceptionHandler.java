@@ -58,13 +58,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public Mono<ResponseEntity<ErrorResponse>> handleIllegalArgumentException(IllegalArgumentException ex) {
-        log.warn("Illegal argument: {}", ex.getMessage());
+        log.warn("Illegal argument", ex);
         return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage())));
     }
 
     @ExceptionHandler(Throwable.class)
     public Mono<ResponseEntity<ErrorResponse>> handleGenericException(Throwable ex) {
-        log.error("An unexpected error occurred: {}", ex.getMessage(), ex);
+        log.error("An unexpected error occurred", ex);
         return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), "An unexpected error occurred. Please try again later.")));
     }
 

@@ -17,9 +17,6 @@ import java.util.List;
 @Configuration
 public class OpenApiConfig {
 
-    @Value("${spring.application.name}")
-    private String applicationName;
-
     @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
     private String keycloakIssuerUri; // e.g., http://localhost:8080/realms/test-realm
 
@@ -39,7 +36,7 @@ public class OpenApiConfig {
                 .info(new Info().title(serviceTitle)
                         .version(serviceVersion)
                         .description("API for Document Management System")
-                        .license(new License().name("Apache 2.0").url("http://springdoc.org")))
+                        .license(new License().name("Apache 2.0").url("https://openfilz.org")))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName, new SecurityScheme()

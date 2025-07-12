@@ -403,7 +403,7 @@ public class DocumentServiceImpl implements DocumentService {
                         .switchIfEmpty(Mono.error(new DocumentNotFoundException(FILE, fileIdToCopy)))
                         .filter(doc -> doc.getType() == FILE)
                         .switchIfEmpty(Mono.error(new OperationForbiddenException("Cannot copy folder using file copy API: " + fileIdToCopy)))
-                        .flatMap(originalFile -> raiseErrorIfExists(originalFile.getName(), null, request.allowDuplicateFileNames())
+                        .flatMap(originalFile -> raiseErrorIfExists(originalFile.getName(), request.targetFolderId(), request.allowDuplicateFileNames())
                                 .flatMap(filename -> storageService.copyFile(originalFile.getStoragePath())
                                         .flatMap(newStoragePath -> {
                                             // 2. Create new DB entry for the copied file
@@ -884,7 +884,9 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Mono<DocumentInfo> getDocumentInfo(UUID documentId, Boolean withMetadata, Authentication authentication) {
-        return documentRepository.findById(documentId).flatMap(doc -> {
+        return documentRepository.findById(documentId)
+                .switchIfEmpty(Mono.error(new DocumentNotFoundException(documentId)))
+                .flatMap(doc -> {
             DocumentInfo info = withMetadata != null && withMetadata.booleanValue() ?
                     new DocumentInfo(doc.getType(), doc.getName(), doc.getParentId(), doc.getMetadata() != null ? jsonUtils.toMap(doc.getMetadata()) : null, doc.getSize())
                     : new DocumentInfo(doc.getType(), doc.getName(), doc.getParentId(), null, null);
