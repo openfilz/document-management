@@ -1,5 +1,5 @@
-![image](/.github/badges/jacoco.svg)
-![image](/.github/badges/branches.svg)
+![image](./.github/badges/jacoco.svg)
+![image](./.github/badges/branches.svg)
 
 # 🚀 **_OpenFilz_** Document Management API: Modern, Reactive, and Secure 🚀
 
