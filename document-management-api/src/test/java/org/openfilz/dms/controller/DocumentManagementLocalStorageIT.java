@@ -670,6 +670,44 @@ public class DocumentManagementLocalStorageIT {
                 .expectStatus().isNotFound();
     }
 
+    @Test
+    void whenDeleteMetadata_thenOk() {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("file", new ClassPathResource("schema.sql"));
+        builder.part("metadata", Map.of("owner", "OpenFilz", "appId", "MY_APP_1"));
+
+        UploadResponse uploadResponse = webTestClient.post().uri(uri -> uri.path("/api/v1/documents/upload")
+                        .queryParam("allowDuplicateFileNames", true)
+                        .build())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(uploadResponse);
+
+        DeleteMetadataRequest deleteRequest = new DeleteMetadataRequest(Collections.singletonList("owner"));
+
+        webTestClient.method(HttpMethod.DELETE).uri(uri -> uri.path("/api/v1/documents/{id}/metadata").build(uploadResponse.id()))
+                .body(BodyInserters.fromValue(deleteRequest))
+                .exchange()
+                .expectStatus().isNoContent();
+
+        DocumentInfo info = webTestClient.get().uri(uri ->
+                        uri.path("/api/v1/documents/{id}/info")
+                                .queryParam("withMetadata", true)
+                                .build(uploadResponse.id()))
+                .exchange()
+                .expectBody(DocumentInfo.class)
+                .returnResult().getResponseBody();
+        Assertions.assertNotNull(info);
+        Assertions.assertEquals("schema.sql", info.name());
+        Assertions.assertFalse(info.metadata().containsKey("owner"));
+        Assertions.assertTrue(info.metadata().containsKey("appId"));
+    }
+
     //FileController Tests
 
     @Test
