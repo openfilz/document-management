@@ -1229,4 +1229,30 @@ public class DocumentManagementLocalStorageIT {
         Assertions.assertTrue(folders.stream().anyMatch(f -> f.name().equals("folder-to-list")));
 
     }
+
+    @Test
+    void whenListFolder_thenError() {
+        webTestClient.get()
+                .uri(uri -> uri.path("/api/v1/folders/list")
+                    .queryParam("onlyFiles", true)
+                    .queryParam("onlyFolders", true)
+                    .build())
+                .exchange()
+                .expectStatus().is4xxClientError();
+
+        webTestClient.get()
+                .uri(uri -> uri.path("/api/v1/folders/list")
+                        .queryParam("onlyFiles", true)
+                        .build())
+                .exchange()
+                .expectStatus().isOk();
+
+        webTestClient.get()
+                .uri(uri -> uri.path("/api/v1/folders/list")
+                        .queryParam("onlyFolders", true)
+                        .build())
+                .exchange()
+                .expectStatus().isOk();
+
+    }
 }
