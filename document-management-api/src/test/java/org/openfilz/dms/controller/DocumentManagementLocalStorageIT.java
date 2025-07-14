@@ -989,6 +989,104 @@ public class DocumentManagementLocalStorageIT {
     }
 
     @Test
+    void whenCopyFolderRecursive_thenOk() {
+        CreateFolderRequest createSourceFolderRequest = new CreateFolderRequest("test-folder-source", null);
+
+        FolderResponse sourceFolderResponse = webTestClient.post().uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(createSourceFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(FolderResponse.class)
+                .returnResult().getResponseBody();
+
+        CreateFolderRequest createSourceSubFolderRequest = new CreateFolderRequest("test-subfolder-source", sourceFolderResponse.id());
+
+        FolderResponse sourceSubFolderResponse = webTestClient.post().uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(createSourceSubFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(FolderResponse.class)
+                .returnResult().getResponseBody();
+
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("file", new ClassPathResource("schema.sql"));
+        builder.part("parentFolderId", sourceFolderResponse.id().toString());
+
+        UploadResponse sourceRootFile = webTestClient.post().uri(uri -> uri.path("/api/v1/documents/upload")
+                        .build())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        builder = new MultipartBodyBuilder();
+        builder.part("file", new ClassPathResource("test.txt"));
+        builder.part("parentFolderId", sourceSubFolderResponse.id().toString());
+
+        UploadResponse sourceSubFolderFile = webTestClient.post().uri(uri -> uri.path("/api/v1/documents/upload")
+                        .build())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        CreateFolderRequest createFolderRequest2 = new CreateFolderRequest("test-folder-target", null);
+
+        FolderResponse folderResponse2 = webTestClient.post().uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(createFolderRequest2))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(FolderResponse.class)
+                .returnResult().getResponseBody();
+
+        CopyRequest copyRequest = new CopyRequest(Collections.singletonList(sourceFolderResponse.id()), folderResponse2.id(), false);
+
+        webTestClient.post().uri("/api/v1/folders/copy")
+                .body(BodyInserters.fromValue(copyRequest))
+                .exchange()
+                .expectStatus().isOk();
+
+        List<FolderElementInfo> targetFolderInfoList = webTestClient.get().uri("/api/v1/folders/list?folderId={id}", folderResponse2.id())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(FolderElementInfo.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(targetFolderInfoList);
+        Assertions.assertEquals(1, targetFolderInfoList.size());
+        Assertions.assertTrue(targetFolderInfoList.stream().anyMatch(resp->resp.type().equals(DocumentType.FOLDER) && resp.name().equals("test-folder-source")));
+
+        FolderElementInfo targetFolderRoot = targetFolderInfoList.stream().filter(resp -> resp.type().equals(DocumentType.FOLDER) && resp.name().equals("test-folder-source")).findAny().get();
+
+        List<FolderElementInfo> targetFolderRootInfoList = webTestClient.get().uri("/api/v1/folders/list?folderId={id}", targetFolderRoot.id())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(FolderElementInfo.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(targetFolderRootInfoList);
+        Assertions.assertEquals(2, targetFolderRootInfoList.size());
+        Assertions.assertTrue(targetFolderRootInfoList.stream().anyMatch(resp->resp.type().equals(DocumentType.FILE) && resp.name().equals("schema.sql")));
+        Assertions.assertTrue(targetFolderRootInfoList.stream().anyMatch(resp->resp.type().equals(DocumentType.FOLDER) && resp.name().equals("test-subfolder-source")));
+
+        FolderElementInfo subFolderInfo = targetFolderRootInfoList.stream().filter(resp -> resp.type().equals(DocumentType.FOLDER) && resp.name().equals("test-subfolder-source")).findAny().get();
+
+        List<FolderElementInfo> targetSubFolderInfoList = webTestClient.get().uri("/api/v1/folders/list?folderId={id}", subFolderInfo.id())
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(FolderElementInfo.class)
+                .returnResult().getResponseBody();
+        Assertions.assertNotNull(targetSubFolderInfoList);
+        Assertions.assertEquals(1, targetSubFolderInfoList.size());
+        Assertions.assertTrue(targetSubFolderInfoList.stream().anyMatch(resp->resp.type().equals(DocumentType.FILE) && resp.name().equals("test.txt")));
+
+    }
+
+    @Test
     void whenRenameFolder_thenOk() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("folder-to-rename", null);
 
