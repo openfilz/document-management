@@ -708,6 +708,44 @@ public class DocumentManagementLocalStorageIT {
         Assertions.assertTrue(info.metadata().containsKey("appId"));
     }
 
+    @Test
+    void whenUpdateMetadata_thenOk() {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("file", new ClassPathResource("schema.sql"));
+        builder.part("metadata", Map.of("owner", "OpenFilz", "appId", "MY_APP_1"));
+
+        UploadResponse uploadResponse = webTestClient.post().uri(uri -> uri.path("/api/v1/documents/upload")
+                        .queryParam("allowDuplicateFileNames", true)
+                        .build())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(uploadResponse);
+
+        UpdateMetadataRequest updateMetadataRequest = new UpdateMetadataRequest(Map.of("owner", "Joe", "appId",  "MY_APP_2"));
+
+        webTestClient.method(HttpMethod.PATCH).uri(uri -> uri.path("/api/v1/documents/{id}/metadata").build(uploadResponse.id()))
+                .body(BodyInserters.fromValue(updateMetadataRequest))
+                .exchange()
+                .expectStatus().isOk();
+
+        DocumentInfo info = webTestClient.get().uri(uri ->
+                        uri.path("/api/v1/documents/{id}/info")
+                                .queryParam("withMetadata", true)
+                                .build(uploadResponse.id()))
+                .exchange()
+                .expectBody(DocumentInfo.class)
+                .returnResult().getResponseBody();
+        Assertions.assertNotNull(info);
+        Assertions.assertEquals("schema.sql", info.name());
+        Assertions.assertEquals("Joe", info.metadata().get("owner"));
+        Assertions.assertEquals("MY_APP_2", info.metadata().get("appId"));
+    }
+
     //FileController Tests
 
     @Test
