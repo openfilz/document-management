@@ -1254,5 +1254,12 @@ public class DocumentManagementLocalStorageIT {
                 .exchange()
                 .expectStatus().isOk();
 
+        webTestClient.get()
+                .uri(uri -> uri.path("/api/v1/folders/list")
+                        .queryParam("folderId", UUID.randomUUID().toString())
+                        .build())
+                .exchange()
+                .expectStatus().isNotFound();
+
     }
 }
