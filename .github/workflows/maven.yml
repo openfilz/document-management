@@ -39,18 +39,10 @@ jobs:
             ${{ github.workspace }}/document-management-api/target/jacoco/jacoco.xml
             ${{ github.workspace }}/document-management-api/target/jacoco/index.html
        
-      - name: Add coverage to PR
-        id: jacoco
-        uses: madrapps/jacoco-report@v1.7.2
+      - name: Add JaCoCo Coverage Summary
+        uses: jjmrocha/jacoco-summary@v1
         with:
-          paths: ${{ github.workspace }}/document-management-api/target/jacoco/jacoco.xml
-          token: ${{ secrets.GITHUB_TOKEN }}
-          min-coverage-overall: 70
-          min-coverage-changed-files: 60
-          title: '# :recycle: Coverage Report'
-          update-comment: true
-          pass-emoji: ':green_circle:'
-          fail-emoji: ':red_circle:'
+          jacoco-csv-file: document-management-api/target/jacoco/jacoco.csv
 
       # Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
       # - name: Update dependency graph
