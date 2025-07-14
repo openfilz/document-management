@@ -1087,6 +1087,91 @@ public class DocumentManagementLocalStorageIT {
     }
 
     @Test
+    void whenDeleteFolderRecursive_thenOk() {
+        CreateFolderRequest createSourceFolderRequest = new CreateFolderRequest("test-folder-source", null);
+
+        FolderResponse sourceFolderResponse = webTestClient.post().uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(createSourceFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(FolderResponse.class)
+                .returnResult().getResponseBody();
+
+        CreateFolderRequest createSourceSubFolderRequest = new CreateFolderRequest("test-subfolder-source", sourceFolderResponse.id());
+
+        FolderResponse sourceSubFolderResponse = webTestClient.post().uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(createSourceSubFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(FolderResponse.class)
+                .returnResult().getResponseBody();
+
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("file", new ClassPathResource("schema.sql"));
+        builder.part("parentFolderId", sourceFolderResponse.id().toString());
+
+        UploadResponse sourceRootFile = webTestClient.post().uri(uri -> uri.path("/api/v1/documents/upload")
+                        .build())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        builder = new MultipartBodyBuilder();
+        builder.part("file", new ClassPathResource("test.txt"));
+        builder.part("parentFolderId", sourceSubFolderResponse.id().toString());
+
+        UploadResponse sourceSubFolderFile = webTestClient.post().uri(uri -> uri.path("/api/v1/documents/upload")
+                        .build())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        CreateFolderRequest createFolderRequest2 = new CreateFolderRequest("test-folder-target", null);
+
+        FolderResponse folderResponse2 = webTestClient.post().uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(createFolderRequest2))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(FolderResponse.class)
+                .returnResult().getResponseBody();
+
+
+        DeleteRequest deleteRequest = new DeleteRequest(Collections.singletonList(sourceFolderResponse.id()));
+
+        webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(deleteRequest))
+                .exchange()
+                .expectStatus().isNoContent();
+
+        webTestClient.get().uri(uri -> uri.path("/api/v1/documents/{id}/info")
+                        .build(sourceFolderResponse.id()))
+                .exchange()
+                .expectStatus().isNotFound();
+
+        webTestClient.get().uri(uri -> uri.path("/api/v1/documents/{id}/info")
+                        .build(sourceSubFolderResponse.id()))
+                .exchange()
+                .expectStatus().isNotFound();
+
+        webTestClient.get().uri(uri -> uri.path("/api/v1/documents/{id}/info")
+                        .build(sourceRootFile.id()))
+                .exchange()
+                .expectStatus().isNotFound();
+
+        webTestClient.get().uri(uri -> uri.path("/api/v1/documents/{id}/info")
+                        .build(sourceSubFolderFile.id()))
+                .exchange()
+                .expectStatus().isNotFound();
+
+    }
+
+    @Test
     void whenRenameFolder_thenOk() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("folder-to-rename", null);
 
