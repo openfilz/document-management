@@ -238,4 +238,27 @@ public class MinioStorageService implements StorageService {
         }).subscribeOn(Schedulers.boundedElastic());
     }
 
+    @Override
+    public Mono<Void> deleteAll() {
+        return Mono.fromCallable(() -> {
+            try {
+                Iterable<Result<Item>> results = minioClient.listObjects(
+                        ListObjectsArgs.builder().bucket(bucketName).recursive(true).build()
+                );
+                for (Result<Item> result : results) {
+                    Item item = result.get();
+                    minioClient.removeObject(
+                            RemoveObjectArgs.builder().bucket(bucketName).object(item.objectName()).build()
+                    );
+                    log.info("Deleted object: {}", item.objectName());
+                }
+                log.info("All objects deleted from MinIO bucket: {}", bucketName);
+                return null;
+            } catch (Exception e) {
+                log.error("Failed to delete all objects from MinIO bucket: {}", bucketName, e);
+                throw new StorageException("Failed to delete all objects from MinIO bucket", e);
+            }
+        }).subscribeOn(Schedulers.boundedElastic()).then();
+    }
+
 }

@@ -36,4 +36,6 @@ public interface StorageService {
     Flux<String> listObjects(String prefix); // List objects under a "folder" prefix for S3 or FS
 
     Mono<Long> getFileLength(String storagePath);
+
+    Mono<Void> deleteAll();
 }

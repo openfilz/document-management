@@ -130,4 +130,28 @@ public class LocalStorageService implements StorageService {
         }
     }
 
+    @Override
+    public Mono<Void> deleteAll() {
+        return Mono.fromRunnable(() -> {
+            try {
+                Files.walk(rootLocation)
+                        .sorted(java.util.Comparator.reverseOrder())
+                        .forEach(path -> {
+                            try {
+                                Files.delete(path);
+                            } catch (IOException e) {
+                                if (!(e instanceof NoSuchFileException)) {
+                                    log.error("Failed to delete path: {}", path, e);
+                                    throw new StorageException("Failed to delete path: " + path, e);
+                                }
+                            }
+                        });
+                log.info("All files and directories deleted from local storage: {}", rootLocation);
+            } catch (IOException e) {
+                log.error("Failed to delete all files from local storage: {}", rootLocation, e);
+                throw new StorageException("Failed to delete all files from local storage", e);
+            }
+        });
+    }
+
 }
