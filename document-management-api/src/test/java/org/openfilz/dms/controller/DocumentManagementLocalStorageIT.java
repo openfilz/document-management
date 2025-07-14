@@ -1088,7 +1088,7 @@ public class DocumentManagementLocalStorageIT {
 
     @Test
     void whenDeleteFolderRecursive_thenOk() {
-        CreateFolderRequest createSourceFolderRequest = new CreateFolderRequest("test-folder-source", null);
+        CreateFolderRequest createSourceFolderRequest = new CreateFolderRequest("test-delete-folder-source", null);
 
         FolderResponse sourceFolderResponse = webTestClient.post().uri("/api/v1/folders")
                 .body(BodyInserters.fromValue(createSourceFolderRequest))
@@ -1097,7 +1097,7 @@ public class DocumentManagementLocalStorageIT {
                 .expectBody(FolderResponse.class)
                 .returnResult().getResponseBody();
 
-        CreateFolderRequest createSourceSubFolderRequest = new CreateFolderRequest("test-subfolder-source", sourceFolderResponse.id());
+        CreateFolderRequest createSourceSubFolderRequest = new CreateFolderRequest("test-delete-subfolder-source", sourceFolderResponse.id());
 
         FolderResponse sourceSubFolderResponse = webTestClient.post().uri("/api/v1/folders")
                 .body(BodyInserters.fromValue(createSourceSubFolderRequest))
@@ -1131,16 +1131,6 @@ public class DocumentManagementLocalStorageIT {
                 .expectStatus().isCreated()
                 .expectBody(UploadResponse.class)
                 .returnResult().getResponseBody();
-
-        CreateFolderRequest createFolderRequest2 = new CreateFolderRequest("test-folder-target", null);
-
-        FolderResponse folderResponse2 = webTestClient.post().uri("/api/v1/folders")
-                .body(BodyInserters.fromValue(createFolderRequest2))
-                .exchange()
-                .expectStatus().isCreated()
-                .expectBody(FolderResponse.class)
-                .returnResult().getResponseBody();
-
 
         DeleteRequest deleteRequest = new DeleteRequest(Collections.singletonList(sourceFolderResponse.id()));
 
