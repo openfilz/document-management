@@ -746,6 +746,27 @@ public class DocumentManagementLocalStorageIT {
         Assertions.assertEquals("MY_APP_2", info.metadata().get("appId"));
     }
 
+    @Test
+    void whenUpdateOrDeleteMetadataWithNoKeys_thenError() {
+
+
+        UpdateMetadataRequest updateMetadataRequest = new UpdateMetadataRequest(Map.of());
+
+        webTestClient.method(HttpMethod.PATCH).uri(uri -> uri.path("/api/v1/documents/{id}/metadata").build(UUID.randomUUID().toString()))
+                .body(BodyInserters.fromValue(updateMetadataRequest))
+                .exchange()
+                .expectStatus().is4xxClientError();
+
+        DeleteMetadataRequest deleteRequest = new DeleteMetadataRequest(Collections.emptyList());
+
+        webTestClient.method(HttpMethod.DELETE).uri(uri -> uri.path("/api/v1/documents/{id}/metadata").build(UUID.randomUUID().toString()))
+                .body(BodyInserters.fromValue(deleteRequest))
+                .exchange()
+                .expectStatus().is4xxClientError();
+
+
+    }
+
     //FileController Tests
 
     @Test
