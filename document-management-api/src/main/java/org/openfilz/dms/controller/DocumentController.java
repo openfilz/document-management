@@ -39,6 +39,8 @@ import static org.openfilz.dms.controller.ApiDescription.ALLOW_DUPLICATE_FILE_NA
 @SecurityRequirement(name = "keycloak_auth")
 public class DocumentController {
 
+    public static final String ATTACHMENT_ZIP = "attachment; filename=\"documents.zip\"";
+
     private final DocumentService documentService;
     private final ObjectMapper objectMapper; // For parsing metadata string
 
@@ -169,8 +171,8 @@ public class DocumentController {
             Authentication authentication) {
         return documentService.downloadMultipleDocumentsAsZip(documentIds, authentication)
                 .map(resource -> ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"documents.zip\"")
-                        .contentType(MediaType.APPLICATION_OCTET_STREAM) //MediaType.APPLICATION_ZIP is also common
+                        .header(HttpHeaders.CONTENT_DISPOSITION, ATTACHMENT_ZIP)
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
                         .body(resource));
     }
 

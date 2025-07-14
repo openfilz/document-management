@@ -2,6 +2,7 @@ package org.openfilz.dms.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.openfilz.dms.dto.*;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -23,13 +25,25 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+import static java.nio.file.StandardOpenOption.CREATE;
+import static java.nio.file.StandardOpenOption.WRITE;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@Slf4j
 public class DocumentManagementLocalStorageIT {
 
     @Autowired
@@ -539,6 +553,95 @@ public class DocumentManagementLocalStorageIT {
                 .expectHeader().contentType("application/x-sql")
                 .expectBody(String.class).isEqualTo(new String(new ClassPathResource("schema.sql").getInputStream().readAllBytes()));
     }
+
+    @Test
+    void whenDownloadDocument_thenNotFound() {
+        webTestClient.get().uri("/api/v1/documents/{id}/download", UUID.randomUUID())
+                .exchange()
+                .expectStatus().isNotFound();
+    }
+
+    @Test
+    void whenDownloadDocumentMultiple_thenOk() throws IOException {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        ClassPathResource file1 = new ClassPathResource("schema.sql");
+        builder.part("file", file1);
+        ClassPathResource file2 = new ClassPathResource("test.txt");
+        builder.part("file", file2);
+
+        List<UploadResponse> uploadResponse = webTestClient.post().uri(uri -> uri.path("/api/v1/documents/uploadMultiple")
+                .queryParam("allowDuplicateFileNames", true)
+                .build())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(new ParameterizedTypeReference<List<UploadResponse>>() {})
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(uploadResponse);
+        UploadResponse uploadResponse1 = uploadResponse.get(0);
+        UploadResponse uploadResponse2 = uploadResponse.get(1);
+
+        Resource resource = webTestClient.post().uri("/api/v1/documents/download-multiple")
+                .body(BodyInserters.fromValue(List.of(uploadResponse1.id(), uploadResponse2.id())))
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .expectBody(Resource.class)
+                .returnResult().getResponseBody();
+        Assertions.assertNotNull(resource);
+        Assertions.assertEquals("documents.zip", resource.getFilename());
+
+        Path targetFolder = Files.createTempDirectory(UUID.randomUUID().toString());
+        unzip(resource, targetFolder);
+        int n = 0;
+        int k = 0;
+
+        Path temp = Files.createTempDirectory(UUID.randomUUID().toString());
+        Path tmpFile1 = temp.resolve(file1.getFilename());
+        try (InputStream is = file1.getInputStream()) {
+            Files.copy(is, tmpFile1);
+        }
+        Path tmpFile2 = temp.resolve(file2.getFilename());
+        try (InputStream is = file2.getInputStream()) {
+            Files.copy(is, tmpFile2);
+        }
+
+
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(targetFolder)) {
+            for (Path file : stream) {
+                if(file.getFileName().toString().equals(file1.getFilename())) {
+                    Assertions.assertEquals(-1L, Files.mismatch(file, tmpFile1));
+                    n++;
+                } else if(file.getFileName().toString().equals(file2.getFilename())) {
+                    Assertions.assertEquals(-1L, Files.mismatch(file, tmpFile2));
+                    n++;
+                } else {
+                    k++;
+                }
+            }
+        }
+        Assertions.assertEquals(2, n);
+        Assertions.assertEquals(0, k);
+
+    }
+
+    public static void unzip(final Resource zipFile, final Path targetFolder) throws IOException {
+        try (ZipInputStream zipInputStream = new ZipInputStream(Channels.newInputStream(Channels.newChannel(zipFile.getInputStream())))) {
+            for (ZipEntry entry = zipInputStream.getNextEntry(); entry != null; entry = zipInputStream.getNextEntry()) {
+                Path toPath = targetFolder.resolve(entry.getName());
+                if (entry.isDirectory()) {
+                    Files.createDirectory(toPath);
+                } else try (FileChannel fileChannel = FileChannel.open(toPath, WRITE, CREATE/*, DELETE_ON_CLOSE*/)) {
+                    fileChannel.transferFrom(Channels.newChannel(zipInputStream), 0, Long.MAX_VALUE);
+                }
+            }
+        }
+        log.debug("File {} unzipped in {}", zipFile.getFilename(), targetFolder);
+    }
+
 
     @Test
     void whenDeleteDocument_thenNoContent() {
