@@ -18,6 +18,7 @@ import org.openfilz.dms.enums.DocumentType;
 import org.openfilz.dms.exception.DocumentNotFoundException;
 import org.openfilz.dms.exception.DuplicateNameException;
 import org.openfilz.dms.exception.OperationForbiddenException;
+import org.openfilz.dms.repository.DocumentDAO;
 import org.openfilz.dms.repository.DocumentRepository;
 import org.openfilz.dms.service.impl.DocumentServiceImpl;
 import org.openfilz.dms.utils.JsonUtils;
@@ -44,6 +45,9 @@ class DocumentServiceImplTest {
 
     @Mock
     private DocumentRepository documentRepository;
+
+    @Mock
+    private DocumentDAO documentDAO;
 
     @Mock
     private StorageService storageService;
@@ -389,8 +393,8 @@ class DocumentServiceImplTest {
         when(storageService.deleteFile("old-path")).thenReturn(Mono.empty());
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(document));
         when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
-        when(newFilePart.content()).thenReturn(Flux.empty());
-        when(newFilePart.headers()).thenReturn(new HttpHeaders());
+        Mockito.lenient().when(newFilePart.content()).thenReturn(Flux.empty());
+        Mockito.lenient().when(newFilePart.headers()).thenReturn(new HttpHeaders());
 
         Mono<Document> result = documentService.replaceDocumentContent(documentId, newFilePart, 123L, mockAuthentication);
 
@@ -493,8 +497,7 @@ class DocumentServiceImplTest {
         SearchByMetadataRequest request = new SearchByMetadataRequest(null, null, null, null, Map.of("key", "value"));
         UUID docId = UUID.randomUUID();
 
-        when(objectMapper.writeValueAsString(request.metadataCriteria())).thenReturn("{\"key\":\"value\"}");
-        when(documentRepository.listDocumentIdsWithMetadata(any(), anyString())).thenReturn(Flux.just(docId));
+        when(documentDAO.listDocumentIds(any())).thenReturn(Flux.just(docId));
 
         Flux<UUID> result = documentService.searchDocumentIdsByMetadata(request, mockAuthentication);
 

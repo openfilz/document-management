@@ -37,7 +37,6 @@ public interface DocumentService {
     // Document (File/Folder) Operations
     Mono<UploadResponse> uploadDocument(FilePart filePart, Long contentLength, UUID parentFolderId, Map<String, Object> metadata, Boolean allowDuplicateFileNames, Authentication auth);
 
-    //Flux<UploadResponse> uploadMultipleDocuments(Flux<FilePart> fileParts, UUID parentFolderId, List<Map<String, Object>> metadatas, Authentication auth); // Complex mapping metadata to files
     Mono<Document> replaceDocumentContent(UUID documentId, FilePart newFilePart, Long contentLength, Authentication auth);
 
     Mono<Document> replaceDocumentMetadata(UUID documentId, Map<String, Object> newMetadata, Authentication auth);

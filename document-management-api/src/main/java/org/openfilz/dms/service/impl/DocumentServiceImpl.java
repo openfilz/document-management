@@ -1,6 +1,5 @@
 package org.openfilz.dms.service.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -16,6 +15,7 @@ import org.openfilz.dms.exception.DocumentNotFoundException;
 import org.openfilz.dms.exception.DuplicateNameException;
 import org.openfilz.dms.exception.OperationForbiddenException;
 import org.openfilz.dms.exception.StorageException;
+import org.openfilz.dms.repository.DocumentDAO;
 import org.openfilz.dms.repository.DocumentRepository;
 import org.openfilz.dms.service.AuditService;
 import org.openfilz.dms.service.DocumentService;
@@ -25,7 +25,6 @@ import org.openfilz.dms.utils.MapEntry;
 import org.openfilz.dms.utils.UserPrincipalExtractor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -58,6 +57,7 @@ public class DocumentServiceImpl implements DocumentService {
     private final ObjectMapper objectMapper; // For JSONB processing
     private final AuditService auditService; // For auditing
     private final JsonUtils jsonUtils;
+    private final DocumentDAO documentDAO;
 
 
     @Override
@@ -615,22 +615,28 @@ public class DocumentServiceImpl implements DocumentService {
                 .flatMap(document -> {
                     // 1. Save new file content
                     String oldStoragePath = document.getStoragePath();
+
                     return storageService.saveFile(newFilePart)
-                            .flatMap(newStoragePath -> replaceDocumentContentAndSave(newFilePart, username, document, newStoragePath, oldStoragePath));
+                            .flatMap(newStoragePath ->
+                                    replaceDocumentContentAndSave(newFilePart, contentLength, username, document, newStoragePath, oldStoragePath));
                 }));
     }
 
-    private Mono<Document> replaceDocumentContentAndSave(FilePart newFilePart, String username, Document document, String newStoragePath, String oldStoragePath) {
-        // 2. Update document metadata
+    private Mono<Document> replaceDocumentContentAndSave(FilePart newFilePart, Long contentLength, String username, Document document, String newStoragePath, String oldStoragePath) {
+        if(contentLength == null) {
+            return storageService.getFileLength(newStoragePath)
+                    .flatMap(fileLength -> replaceDocumentInDB(newFilePart, newStoragePath, oldStoragePath, fileLength, username, document));
+        }
+        return replaceDocumentInDB(newFilePart, newStoragePath, oldStoragePath, contentLength, username, document);
+    }
+
+    private Mono<Document> replaceDocumentInDB(FilePart newFilePart, String newStoragePath, String oldStoragePath, Long contentLength, String username, Document document) {
         document.setStoragePath(newStoragePath);
         document.setContentType(newFilePart.headers().getContentType() != null ? newFilePart.headers().getContentType().toString() : APPLICATION_OCTET_STREAM);
         document.setUpdatedAt(OffsetDateTime.now());
         document.setUpdatedBy(username);
-        // Update size
-        return DataBufferUtils.join(newFilePart.content())
-                .map(dataBuffer -> (long) dataBuffer.readableByteCount())
-                .doOnNext(document::setSize)
-                .then(documentRepository.save(document))
+        document.setSize(contentLength);
+        return documentRepository.save(document)
                 .flatMap(savedDoc -> {
                     // 3. Delete old file content from storage
                     if (oldStoragePath != null && !oldStoragePath.equals(newStoragePath)) {
@@ -795,58 +801,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Flux<UUID> searchDocumentIdsByMetadata(SearchByMetadataRequest request, Authentication auth) {
-        return getConnectedUser(auth).flatMapMany(username -> {
-            boolean noMetadataCriteria = request.metadataCriteria() == null || request.metadataCriteria().isEmpty();
-            boolean noNameCriteria = request.name() == null || request.name().isEmpty();
-            boolean noTypeCriteria = request.type() == null;
-            boolean noParentFolderCriteria = request.parentFolderId() == null;
-            boolean noRootOnlyCriteria = request.rootOnly() == null;
-            if(!noParentFolderCriteria && (!noRootOnlyCriteria && request.rootOnly())) {
-                return Flux.error(new IllegalArgumentException("Impossible to specify simultaneously rootOnly 'true' and parentFolderId not null"));
-            }
-            if(noNameCriteria
-                    && noTypeCriteria
-                    && noMetadataCriteria) {
-                return Flux.error(new IllegalArgumentException("All criteria cannot be empty."));
-            }
-            try {
-                if(noMetadataCriteria) {
-                    //Only type criteria
-                    if(noNameCriteria) {
-                        return !noRootOnlyCriteria && request.rootOnly() ? documentRepository.listDocumentIdsAtRootLevel(request.type())
-                                : noParentFolderCriteria ? documentRepository.listDocumentIds(request.type()) : documentRepository.listDocumentIdsWithType(request.parentFolderId(), request.type());
-                    }
-                    //Only name criteria
-                    if(noTypeCriteria) {
-                        return !noRootOnlyCriteria && request.rootOnly() ? documentRepository.listDocumentIdsWithNameAtRootLevel(request.name())
-                                : noParentFolderCriteria ? documentRepository.listDocumentIdsWithName(request.name()) : documentRepository.listDocumentIdsWithName(request.parentFolderId(), request.name());
-                    }
-                    //Type and name criteria
-                    return !noRootOnlyCriteria && request.rootOnly() ? documentRepository.listDocumentIdsWithNameAndTypeAtRootLevel(request.name(), request.type())
-                            : noParentFolderCriteria ? documentRepository.listDocumentIdsWithNameAndType(request.name(), request.type()) : documentRepository.listDocumentIdsWithNameAndType(request.parentFolderId(), request.name(), request.type());
-                }
-                //Metadata criteria not empty
-                // R2DBC JSONB query: field @> '{"key": "value"}'
-                // For multiple criteria, build a JSON object like: {"key1": "value1", "key2": "value2"}
-                String criteriaJson = objectMapper.writeValueAsString(request.metadataCriteria());
-                //Only type criteria
-                if(noNameCriteria) {
-                    return !noRootOnlyCriteria && request.rootOnly() ? documentRepository.listDocumentIdsAtRootLevelWithMetadata(request.type(), criteriaJson)
-                            : noParentFolderCriteria ? documentRepository.listDocumentIdsWithMetadata(request.type(), criteriaJson) : documentRepository.listDocumentIdsWithTypeWithMetadata(request.parentFolderId(), request.type(), criteriaJson);
-                }
-                //Only name criteria
-                if(noTypeCriteria) {
-                    return !noRootOnlyCriteria && request.rootOnly() ? documentRepository.listDocumentIdsWithNameAtRootLevelWithMetadata(request.name(), criteriaJson)
-                            : noParentFolderCriteria ? documentRepository.listDocumentIdsWithNameWithMetadata(request.name(), criteriaJson) : documentRepository.listDocumentIdsWithNameWithMetadata(request.parentFolderId(), request.name(), criteriaJson);
-                }
-                //Type and name criteria
-                return !noRootOnlyCriteria && request.rootOnly() ? documentRepository.listDocumentIdsWithNameAndTypeAndMetadataAtRootLevel(request.name(), request.type(), criteriaJson)
-                        : noParentFolderCriteria ? documentRepository.listDocumentIdsWithNameAndTypeAndMetadata(request.name(), request.type(), criteriaJson) : documentRepository.listDocumentIdsWithNameAndTypeAndMetadata(request.parentFolderId(), request.name(), request.type(), criteriaJson);
-
-            } catch (JsonProcessingException e) {
-                return Flux.error(new RuntimeException("Error processing metadata criteria for search.", e));
-            }
-        });
+        return getConnectedUser(auth).flatMapMany(_ -> documentDAO.listDocumentIds(request));
     }
 
     @Override

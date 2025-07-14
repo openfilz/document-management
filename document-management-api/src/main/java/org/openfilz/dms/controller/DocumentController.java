@@ -107,7 +107,7 @@ public class DocumentController {
     public Mono<ResponseEntity<DocumentBrief>> replaceDocumentContent(
             @PathVariable UUID documentId,
             @RequestPart("file") Mono<FilePart> newFilePartMono,
-            @RequestHeader("Content-Length") Long contentLength,
+            @Parameter(hidden = true) @RequestHeader(name = "Content-Length", required = false) Long contentLength,
             Authentication authentication) {
         return newFilePartMono.flatMap(filePart -> documentService.replaceDocumentContent(documentId, filePart, contentLength, authentication))
                 .map(doc -> new DocumentBrief(doc.getId(), doc.getName(), doc.getType().name()))
