@@ -1,3 +1,6 @@
+![image]({./.github/badges/jacoco.svg})
+![image]({./.github/badges/branches.svg})
+
 # 🚀 **_OpenFilz_** Document Management API: Modern, Reactive, and Secure 🚀
 
 Welcome to the next generation of document management. This isn't just another file storage API; it's a meticulously crafted, high-performance system designed for scalability, security, and a stellar developer experience. It provides a robust, centralized solution to handle all your application's document needs.
