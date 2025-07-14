@@ -562,6 +562,24 @@ public class DocumentManagementLocalStorageIT {
     }
 
     @Test
+    void whenDownloadDocumentMultiple_thenError() throws IOException {
+        webTestClient.post().uri("/api/v1/documents/download-multiple")
+                .body(BodyInserters.fromValue(Collections.emptyList()))
+                .exchange()
+                .expectStatus().is4xxClientError();
+
+        Resource zip = webTestClient.post().uri("/api/v1/documents/download-multiple")
+                .body(BodyInserters.fromValue(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString())))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(Resource.class)
+                .returnResult().getResponseBody();
+        Path targetFolder = Files.createTempDirectory(UUID.randomUUID().toString());
+        unzip(zip, targetFolder);
+        Assertions.assertEquals(0L, Files.list(targetFolder).count());
+    }
+
+    @Test
     void whenDownloadDocumentMultiple_thenOk() throws IOException {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         ClassPathResource file1 = new ClassPathResource("schema.sql");
