@@ -828,6 +828,105 @@ public class DocumentManagementLocalStorageIT {
     }
 
     @Test
+    void whenMoveFile_thenError() {
+
+        CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-for-move", null);
+
+        FolderResponse folder = webTestClient.post().uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(createFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(FolderResponse.class)
+                .returnResult().getResponseBody();
+
+        createFolderRequest = new CreateFolderRequest("test-folder-for-move", folder.id());
+
+        FolderResponse folder2 = webTestClient.post().uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(createFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(FolderResponse.class)
+                .returnResult().getResponseBody();
+
+        MoveRequest moveRequest = new MoveRequest(Collections.singletonList(folder2.id()), folder.id(), false);
+
+        webTestClient.post().uri("/api/v1/files/move")
+                .body(BodyInserters.fromValue(moveRequest))
+                .exchange()
+                .expectStatus().is4xxClientError();
+
+        moveRequest = new MoveRequest(Collections.singletonList(folder.id()), folder2.id(), false);
+
+        webTestClient.post().uri("/api/v1/files/move")
+                .body(BodyInserters.fromValue(moveRequest))
+                .exchange()
+                .expectStatus().is4xxClientError();
+
+        moveRequest = new MoveRequest(Collections.singletonList(folder2.id()), folder2.id(), false);
+
+        webTestClient.post().uri("/api/v1/folders/move")
+                .body(BodyInserters.fromValue(moveRequest))
+                .exchange()
+                .expectStatus().is4xxClientError();
+
+        moveRequest = new MoveRequest(Collections.singletonList(folder.id()), folder2.id(), false);
+
+        webTestClient.post().uri("/api/v1/folders/move")
+                .body(BodyInserters.fromValue(moveRequest))
+                .exchange()
+                .expectStatus().is4xxClientError();
+
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("file", new ClassPathResource("schema.sql"));
+
+        UploadResponse file = webTestClient.post().uri("/api/v1/documents/upload")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        moveRequest = new MoveRequest(Collections.singletonList(file.id()), null, false);
+
+        webTestClient.post().uri("/api/v1/files/move")
+                .body(BodyInserters.fromValue(moveRequest))
+                .exchange()
+                .expectStatus().is4xxClientError();
+
+        moveRequest = new MoveRequest(Collections.singletonList(file.id()), folder.id(), true);
+
+        webTestClient.post().uri("/api/v1/files/move")
+                .body(BodyInserters.fromValue(moveRequest))
+                .exchange()
+                .expectStatus().isOk();
+
+        UploadResponse file2 = webTestClient.post().uri("/api/v1/documents/upload")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        moveRequest = new MoveRequest(Collections.singletonList(file2.id()), folder.id(), false);
+
+        webTestClient.post().uri("/api/v1/files/move")
+                .body(BodyInserters.fromValue(moveRequest))
+                .exchange()
+                .expectStatus().is4xxClientError();
+
+        moveRequest = new MoveRequest(Collections.singletonList(file2.id()), folder.id(), true);
+
+        webTestClient.post().uri("/api/v1/files/move")
+                .body(BodyInserters.fromValue(moveRequest))
+                .exchange()
+                .expectStatus().isOk();
+
+
+    }
+
+    @Test
     void whenCopyFile_thenOk() {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part("file", new ClassPathResource("schema.sql"));
@@ -932,6 +1031,23 @@ public class DocumentManagementLocalStorageIT {
                 .expectStatus().isCreated()
                 .expectBody()
                 .jsonPath("$.name").isEqualTo("test-folder");
+    }
+
+    @Test
+    void whenCreateFolder_thenError() {
+        CreateFolderRequest createFolderRequest = new CreateFolderRequest("test/folder", null);
+
+        webTestClient.post().uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(createFolderRequest))
+                .exchange()
+                .expectStatus().is4xxClientError();
+
+        createFolderRequest = new CreateFolderRequest("test", UUID.randomUUID());
+
+        webTestClient.post().uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(createFolderRequest))
+                .exchange()
+                .expectStatus().isNotFound();
     }
 
     @Test
