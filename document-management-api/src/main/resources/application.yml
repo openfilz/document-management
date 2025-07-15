@@ -41,7 +41,7 @@ storage:
 openapi:
   service:
     title: document-management-api
-    url: http://localhost:8081/ # put http://localhost:8081/ for standalone usage & http://localhost:8888/dms-api if the document-management-gateway is used
+    url: ${API_ROOT_URL:http://localhost:8081/} # put http://localhost:8081/ for standalone usage & http://localhost:8888/dms-api if the document-management-gateway is used
     version: 1.0.0
 springdoc:
   api-docs:

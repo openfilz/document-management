@@ -4,6 +4,9 @@
 # @param global Namespace to deploy the chart. It's recommended to use `helm install --namespace` instead.
 global: {}
 
+route:
+  hostname: &route-hostname ""
+
 # -- Common labels and annotations to apply to all resources.
 # @param common.labels Custom labels to add to all resources.
 # @param common.annotations Custom annotations to add to all resources.
@@ -18,7 +21,7 @@ openshift:
   route:
     enabled: false
     # @param openshift.route.hostname The hostname for the Route (e.g., api.example.com). If empty, OpenShift will generate one.
-    hostname: ""
+    hostname: *route-hostname
     # -- TLS configuration for the Route.
     # For more info, see: https://docs.openshift.com/container-platform/latest/networking/routes/secured-routes.html
     tls:
