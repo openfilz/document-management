@@ -31,6 +31,14 @@ jobs:
       - name: Build with Maven
         run: mvn -B verify --file pom.xml
 
+      - name: JIB container build and publish
+        uses: MathieuSoysal/jib-container-publish.yml@v2.1.5
+        with:
+          PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          java-version: 24
+          module: document-management-api
+          main-class: org.openfilz.dms.DmsApiApplication
+
       - name: Generate JaCoCo Badge
         id: jacoco-badge
         uses: cicirello/jacoco-badge-generator@v2
