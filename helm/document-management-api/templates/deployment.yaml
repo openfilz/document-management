@@ -31,6 +31,8 @@ spec:
               value: {{ .Values.database.port | quote }}
             - name: DB_NAME
               value: {{ .Values.database.name }}
+            - name: API_ROOT_URL
+              value: {{ .Values.route.hostname }}
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
