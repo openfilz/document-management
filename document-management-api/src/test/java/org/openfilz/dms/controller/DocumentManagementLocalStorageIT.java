@@ -16,6 +16,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.reactive.server.WebTestClient;
@@ -54,6 +55,9 @@ public class DocumentManagementLocalStorageIT {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private DatabaseClient databaseClient;
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
@@ -487,6 +491,104 @@ public class DocumentManagementLocalStorageIT {
         Assertions.assertNotNull(info);
         Assertions.assertTrue(info.size() != null && info.size() > 0 && !info.size().equals(originalSize));
 
+    }
+
+    @Test
+    void whenLoadFileInCorruptedDatabase_thenError() {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("file", new ClassPathResource("schema.sql"));
+
+        UploadResponse originalUploadResponse = webTestClient.post().uri(uri -> uri.path("/api/v1/documents/upload")
+                        .queryParam("allowDuplicateFileNames", true)
+                        .build())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(originalUploadResponse);
+        UUID id = originalUploadResponse.id();
+
+        corruptStoragePath(id);
+
+        webTestClient.get().uri("/api/v1/documents/{id}/download", id)
+                        .exchange()
+                        .expectStatus().is5xxServerError();
+    }
+
+    @Test
+    void whenDeleteFileInCorruptedDatabase_thenError() {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("file", new ClassPathResource("schema.sql"));
+
+        UploadResponse response = webTestClient.post().uri(uri -> uri.path("/api/v1/documents/upload")
+                        .queryParam("allowDuplicateFileNames", true)
+                        .build())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(response);
+
+        corruptStoragePath(response.id());
+
+        DeleteRequest deleteRequest = new DeleteRequest(Collections.singletonList(response.id()));
+
+        webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri("/api/v1/files")
+                .body(BodyInserters.fromValue(deleteRequest))
+                .exchange()
+                .expectStatus().isNoContent();
+
+    }
+
+    @Test
+    void whenCopyFileInCorruptedDatabase_thenErrorInCorruptedDatabase_thenError() {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("file", new ClassPathResource("schema.sql"));
+
+        UploadResponse response = webTestClient.post().uri(uri -> uri.path("/api/v1/documents/upload")
+                        .queryParam("allowDuplicateFileNames", true)
+                        .build())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(response);
+
+        corruptStoragePath(response.id());
+
+        CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-bb", null);
+
+        UploadResponse folderResponse = webTestClient.post().uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(createFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        CopyRequest copyRequest = new CopyRequest(Collections.singletonList(response.id()), folderResponse.id(), false);
+
+        webTestClient.post().uri("/api/v1/files/copy")
+                .body(BodyInserters.fromValue(copyRequest))
+                .exchange()
+                .expectStatus().is5xxServerError();
+
+    }
+
+    private void corruptStoragePath(UUID id) {
+        databaseClient.sql("update documents set storage_path = :newPath where id = :id")
+                .bind("newPath", UUID.randomUUID().toString())
+                .bind("id", id)
+                .then()
+                .block();
     }
 
     @Test

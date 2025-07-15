@@ -2,7 +2,6 @@
 package org.openfilz.dms.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
-import org.openfilz.dms.exception.DuplicateNameException;
 import org.openfilz.dms.exception.StorageException;
 import org.openfilz.dms.service.StorageService;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,8 +14,6 @@ import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.nio.file.*;
-
-import static org.openfilz.dms.enums.DocumentType.FILE;
 
 @Slf4j
 @Service
@@ -41,9 +38,6 @@ public class LocalStorageService implements StorageService {
         String originalFilename = filePart.filename();
         String storageFileName = getUniqueStorageFileName(originalFilename);
         Path destinationFile = this.rootLocation.resolve(storageFileName).normalize();
-        if (Files.exists(destinationFile)) {
-            return Mono.error(new DuplicateNameException(FILE, originalFilename));
-        }
         return filePart.transferTo(destinationFile)
                 .thenReturn(storageFileName) // Return relative path to be stored
                 .doOnSuccess(path -> log.info("File saved to: {}", destinationFile));
@@ -71,10 +65,10 @@ public class LocalStorageService implements StorageService {
         return Mono.fromRunnable(() -> {
             try {
                 Path filePath = rootLocation.resolve(storagePath).normalize();
-                Files.deleteIfExists(filePath);
+                Files.delete(filePath);
                 log.info("File deleted: {}", storagePath);
             } catch (NoSuchFileException e) {
-                log.warn("File not found for deletion, ignoring: {}", storagePath);
+                log.warn("File {} not found in Local Storage for deletion, presumed already deleted.", storagePath);
             } catch (IOException e) {
                 log.error("Could not delete file: {}", storagePath, e);
                 throw new RuntimeException("Could not delete file: " + storagePath, e);
