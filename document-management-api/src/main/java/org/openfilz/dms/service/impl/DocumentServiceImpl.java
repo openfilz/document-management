@@ -571,7 +571,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     private Mono<Document> saveFileToRename(RenameRequest request, String username, Document fileToRename, Mono<Boolean> duplicateCheck) {
         return duplicateCheck.flatMap(exists -> {
-            if (exists && !fileToRename.getName().equalsIgnoreCase(request.newName())) { // Allow renaming to same name with different case if FS supports
+            if (exists) {
                 return Mono.error(new DuplicateNameException(
                         "A file/folder with name '" + request.newName() + "' already exists in the current location."));
             }

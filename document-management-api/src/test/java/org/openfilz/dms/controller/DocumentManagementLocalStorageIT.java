@@ -555,6 +555,22 @@ public class DocumentManagementLocalStorageIT {
     }
 
     @Test
+    void whenDownloadFolder_thenError() throws IOException {
+        CreateFolderRequest createFolderRequest = new CreateFolderRequest("whenDownloadFolder_thenError", null);
+
+        FolderResponse folder = webTestClient.post().uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(createFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(FolderResponse.class)
+                .returnResult().getResponseBody();
+
+        webTestClient.get().uri("/api/v1/documents/{id}/download", folder.id())
+                .exchange()
+                .expectStatus().is4xxClientError();
+    }
+
+    @Test
     void whenDownloadDocument_thenNotFound() {
         webTestClient.get().uri("/api/v1/documents/{id}/download", UUID.randomUUID())
                 .exchange()
@@ -970,6 +986,20 @@ public class DocumentManagementLocalStorageIT {
         webTestClient.get().uri("/api/v1/documents/{id}/info", response.id())
                 .exchange()
                 .expectStatus().isOk();
+
+        copyRequest = new CopyRequest(Collections.singletonList(response.id()), null, false);
+
+        webTestClient.post().uri("/api/v1/files/copy")
+                .body(BodyInserters.fromValue(copyRequest))
+                .exchange()
+                .expectStatus().is4xxClientError();
+
+        copyRequest = new CopyRequest(Collections.singletonList(response.id()), null, true);
+
+        webTestClient.post().uri("/api/v1/files/copy")
+                .body(BodyInserters.fromValue(copyRequest))
+                .exchange()
+                .expectStatus().isOk();
     }
 
     @Test
@@ -995,6 +1025,13 @@ public class DocumentManagementLocalStorageIT {
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.name").isEqualTo("new-name.sql");
+
+        renameRequest = new RenameRequest("new-name.sql");
+
+        webTestClient.put().uri("/api/v1/files/{fileId}/rename", response.id())
+                .body(BodyInserters.fromValue(renameRequest))
+                .exchange()
+                .expectStatus().is4xxClientError();
     }
 
     @Test
@@ -1318,6 +1355,13 @@ public class DocumentManagementLocalStorageIT {
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.name").isEqualTo("renamed-folder");
+
+        renameRequest = new RenameRequest("renamed-folder");
+
+        webTestClient.put().uri("/api/v1/folders/{folderId}/rename", folderResponse.id())
+                .body(BodyInserters.fromValue(renameRequest))
+                .exchange()
+                .expectStatus().is4xxClientError();
     }
 
     @Test
