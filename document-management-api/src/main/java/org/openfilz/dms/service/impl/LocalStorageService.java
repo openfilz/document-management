@@ -11,7 +11,6 @@ import org.springframework.core.io.PathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
@@ -100,24 +99,6 @@ public class LocalStorageService implements StorageService {
                 throw new RuntimeException("Could not copy file", e);
             }
         }).thenReturn(uniqueFilename);
-    }
-
-
-    @Override
-    public Flux<String> listObjects(String prefix) {
-        Path dirPath = this.rootLocation.resolve(prefix).normalize();
-        if (!Files.isDirectory(dirPath)) {
-            return Flux.empty();
-        }
-        return Flux.fromStream(() -> {
-            try {
-                return Files.list(dirPath)
-                        .map(path -> this.rootLocation.relativize(path).toString().replace(java.io.File.separatorChar, '/'));
-            } catch (IOException e) {
-                log.error("Error listing objects in {}", prefix, e);
-                throw new StorageException("Error listing objects", e);
-            }
-        });
     }
 
     @Override

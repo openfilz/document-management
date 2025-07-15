@@ -3,7 +3,6 @@ package org.openfilz.dms.service.impl;
 
 import io.minio.*;
 import io.minio.errors.ErrorResponseException;
-import io.minio.messages.Item;
 import lombok.extern.slf4j.Slf4j;
 import org.openfilz.dms.exception.StorageException;
 import org.openfilz.dms.service.StorageService;
@@ -14,7 +13,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -192,32 +190,6 @@ public class MinioStorageService implements StorageService {
                 throw new RuntimeException("MinIO copy file failed", e);
             }
         }).subscribeOn(Schedulers.boundedElastic());
-    }
-
-    private Flux<Item> listObjectsInternal(String prefix) {
-        return Flux.defer(() -> {
-            try {
-                Iterable<Result<Item>> results = minioClient.listObjects(
-                        ListObjectsArgs.builder().bucket(bucketName).prefix(prefix).recursive(true).build()
-                );
-                return Flux.fromIterable(results)
-                        .flatMap(result -> Mono.fromCallable(result::get)
-                                .subscribeOn(Schedulers.boundedElastic())
-                                .onErrorResume(e -> {
-                                    log.warn("Error fetching item during listObjects for prefix {}", prefix, e);
-                                    return Mono.empty(); // Skip problematic item
-                                }));
-            } catch (Exception e) {
-                log.error("Error listing objects in MinIO for prefix {}", prefix, e);
-                return Flux.error(new RuntimeException("MinIO list objects failed", e));
-            }
-        });
-    }
-
-
-    @Override
-    public Flux<String> listObjects(String prefix) {
-        return listObjectsInternal(prefix).map(Item::objectName);
     }
 
     @Override

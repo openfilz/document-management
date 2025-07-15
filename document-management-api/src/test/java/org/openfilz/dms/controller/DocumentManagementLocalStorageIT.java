@@ -555,7 +555,7 @@ public class DocumentManagementLocalStorageIT {
     }
 
     @Test
-    void whenDownloadFolder_thenError() throws IOException {
+    void whenDownloadFolder_thenError() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("whenDownloadFolder_thenError", null);
 
         FolderResponse folder = webTestClient.post().uri("/api/v1/folders")
@@ -641,8 +641,6 @@ public class DocumentManagementLocalStorageIT {
         try (InputStream is = file2.getInputStream()) {
             Files.copy(is, tmpFile2);
         }
-
-
 
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(targetFolder)) {
             for (Path file : stream) {

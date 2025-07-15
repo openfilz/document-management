@@ -3,7 +3,6 @@ package org.openfilz.dms.service;
 
 import org.springframework.core.io.Resource;
 import org.springframework.http.codec.multipart.FilePart;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.UUID;
@@ -32,8 +31,6 @@ public interface StorageService {
     Mono<Void> deleteFile(String storagePath);
 
     Mono<String> copyFile(String sourceStoragePath); // Returns new storage path/key
-
-    Flux<String> listObjects(String prefix); // List objects under a "folder" prefix for S3 or FS
 
     Mono<Long> getFileLength(String storagePath);
 }
