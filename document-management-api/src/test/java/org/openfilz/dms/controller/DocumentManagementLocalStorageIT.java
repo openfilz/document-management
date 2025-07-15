@@ -879,7 +879,9 @@ public class DocumentManagementLocalStorageIT {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part("file", new ClassPathResource("schema.sql"));
 
-        UploadResponse file = webTestClient.post().uri("/api/v1/documents/upload")
+        UploadResponse file = webTestClient.post().uri(uri -> uri.path("/api/v1/documents/upload")
+                        .queryParam("allowDuplicateFileNames", true)
+                        .build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()))
                 .exchange()
@@ -901,7 +903,9 @@ public class DocumentManagementLocalStorageIT {
                 .exchange()
                 .expectStatus().isOk();
 
-        UploadResponse file2 = webTestClient.post().uri("/api/v1/documents/upload")
+        UploadResponse file2 = webTestClient.post().uri(uri -> uri.path("/api/v1/documents/upload")
+                        .queryParam("allowDuplicateFileNames", true)
+                        .build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()))
                 .exchange()
