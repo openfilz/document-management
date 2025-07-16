@@ -11,6 +11,7 @@
 
     <artifactId>document-management-api</artifactId>
     <name>Document Management System - API</name>
+    <url>https://github.com/openfilz/document-management/tree/main/document-management-api</url>
     <description>Document Management Service providing REST APIs</description>
 
     <dependencyManagement>
@@ -194,7 +195,6 @@
                 </executions>
             </plugin>
             <plugin><!-- https://mvnrepository.com/artifact/org.jacoco/jacoco-maven-plugin -->
-
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>0.8.13</version>

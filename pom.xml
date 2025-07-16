@@ -8,8 +8,39 @@
     <artifactId>document-management</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
+    <url>https://github.com/openfilz/document-management</url>
 
-    <name>Document Management System - Parent</name>
+    <name>Document Management System</name>
+
+    <description>OpenFilz - Document Management API</description>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://github.com/openfilz/document-management/blob/c8603eab9ba52ab8dfd87e6fc51ef144f8915e98/LICENSE</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <!-- Contact for developers on project -->
+    <developers>
+        <developer>
+            <name>Yann Demel</name>
+            <email>demelyann@gmail.com</email>
+            <!-- Your organization, or Github is fine too -->
+            <organization>OpenFilz</organization>
+            <organizationUrl>https://openfilz.org</organizationUrl>
+        </developer>
+    </developers>
+
+    <!-- Source Control Information, Github Stuff -->
+    <scm>
+        <!-- Should be format scm:git:git or scm:git:https -->
+        <connection>scm:git:https://github.com/openfilz/document-management.git</connection>
+        <developerConnection>scm:git:ssh://github.com/openfilz/document-management.git</developerConnection>
+        <url>https://github.com/openfilz/document-management</url>
+        <tag>HEAD</tag>
+    </scm>
 
     <properties>
         <java.version>24</java.version>
@@ -108,6 +139,60 @@
     </dependencyManagement>
 
     <build>
+        <plugins>
+            <plugin>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.8.0</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <publishingServerId>central</publishingServerId>
+                    <checksums>required</checksums>
+                    <autoPublish>true</autoPublish>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.11.2</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.2.8</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
         <pluginManagement>
             <plugins>
                 <plugin>
