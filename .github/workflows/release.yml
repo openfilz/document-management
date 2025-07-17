@@ -51,8 +51,7 @@ jobs:
 
       - name: Prepare Release
         run: |
-          set -e
-          mvn release:prepare \
+          mvn -X release:prepare \
           -Pkube \
           -DtagNameFormat=v@{project.version} \   
           -Dregistry.hostname=ghcr.io \
@@ -63,7 +62,7 @@ jobs:
 
       - name: Perform Release
         run: |
-          mvn release:perform \
+          mvn -X release:perform \
           -DskipTests \
           -Dgpg.skip
 
