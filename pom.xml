@@ -37,7 +37,7 @@
     <scm>
         <!-- Should be format scm:git:git or scm:git:https -->
         <connection>scm:git:https://github.com/openfilz/document-management.git</connection>
-        <developerConnection>scm:git:ssh://github.com/openfilz/document-management.git</developerConnection>
+        <developerConnection>scm:git:https://github.com/openfilz/document-management.git</developerConnection>
         <url>https://github.com/openfilz/document-management</url>
         <tag>HEAD</tag>
     </scm>
