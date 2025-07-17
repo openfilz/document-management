@@ -50,15 +50,7 @@ jobs:
             }]
 
       - name: Prepare Release
-        run: |
-          mvn -X release:prepare \
-          -Pkube \
-          -DtagNameFormat=v@{project.version} \   
-          -Dregistry.hostname=ghcr.io \
-          -Dregistry.port=443 \
-          -Ddocker.context.path=openfilz/ \
-          -Djib.to.auth.username=${{ github.actor }} \
-          -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}
+        run: mvn -X release:prepare -Pkube -DtagNameFormat=v@{project.version} -Dregistry.hostname=ghcr.io -Dregistry.port=443 -Ddocker.context.path=openfilz/ -Djib.to.auth.username=${{ github.actor }} -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}
 
       - name: Perform Release
         run: |
@@ -104,4 +96,10 @@ jobs:
             target/*.pom
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge on develop
+        run: |
+          git checkout develop
+          git merge main
+          git push
 
