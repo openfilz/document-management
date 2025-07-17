@@ -202,7 +202,7 @@
                             <goal>git-changelog</goal>
                         </goals>
                         <configuration>
-                            <templateFile>changelog.template</templateFile>
+                            <templateFile>changelog.mustache</templateFile>
                             <readableTagName>-([^-]+?)$</readableTagName>
                             <file>CHANGELOG.md</file>
                         </configuration>
