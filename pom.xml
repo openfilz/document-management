@@ -207,7 +207,6 @@
                             <templateFile>changelog.template</templateFile>
                             <readableTagName>-([^-]+?)$</readableTagName>
                             <file>CHANGELOG.md</file>
-                            <mediaWiki>false</mediaWiki>
                         </configuration>
                     </execution>
                 </executions>

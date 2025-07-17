@@ -59,15 +59,13 @@ jobs:
           -Dregistry.port=443 \
           -Ddocker.context.path=openfilz/ \
           -Djib.to.auth.username=${{ github.actor }} \
-          -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} \
-          --file pom.xml
+          -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}
 
       - name: Perform Release
         run: |
           mvn release:perform \
           -DskipTests \
-          -Dgpg.skip \
-          --file pom.xml
+          -Dgpg.skip
 
       - name: Push changes
         run: |
