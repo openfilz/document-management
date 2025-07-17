@@ -23,8 +23,8 @@ jobs:
 
       - name: Configure Git user
         run: |
-          git config user.email "actions@github.com"
-          git config user.name "GitHub Actions"
+          git config --global user.name 'github-actions'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
