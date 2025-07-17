@@ -27,8 +27,15 @@ jobs:
           java-version: '24'
           distribution: 'temurin'
           cache: maven
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_PASSWORD
+
+      - uses: s4u/maven-settings-action@v3.1.0
+        with:
+          servers: |
+            [{
+                "id": "central",
+                "username": "${{ secrets.MAVEN_USERNAME }}",
+                "password": "${{ secrets.MAVEN_PASSWORD }}"
+            }]
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
@@ -37,10 +44,8 @@ jobs:
           passphrase: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
 
       - name: Build with Maven
-        run: mvn -B deploy -Pkube -Dregistry.hostname=ghcr.io -Dregistry.port=443 -Ddocker.context.path=openfilz/ -Djib.to.auth.username=${{ github.actor }} -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} --file pom.xml
-        env:
-          MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+        run: mvn -B clean deploy -Pkube -Dregistry.hostname=ghcr.io -Dregistry.port=443 -Ddocker.context.path=openfilz/ -Djib.to.auth.username=${{ github.actor }} -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} --file pom.xml
+
       #- name: JIB container build and publish
         #  uses: MathieuSoysal/jib-container-publish.yml@v2.1.5
           #with:
