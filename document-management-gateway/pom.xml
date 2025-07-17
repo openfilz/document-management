@@ -11,6 +11,7 @@
 
     <artifactId>document-management-gateway</artifactId>
     <name>Document Management System - API Gateway</name>
+    <url>https://github.com/openfilz/document-management/tree/main/document-management-gateway</url>
     <description>Spring Cloud Gateway for Document Management System</description>
 
     <dependencies>
