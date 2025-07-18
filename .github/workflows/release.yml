@@ -49,11 +49,8 @@ jobs:
                 "password": "${{ secrets.MAVEN_PASSWORD }}"
             }]
 
-      - name: Prepare Release
-        run: mvn release:prepare -Pkube -DtagNameFormat=v@{project.version} -Dregistry.hostname=ghcr.io -Dregistry.port=443 -Ddocker.context.path=openfilz/ -Djib.to.auth.username=${{ github.actor }} -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}
-
-      - name: Perform Release
-        run: mvn release:perform -Darguments="-P=-kube -DskipTests  -DskipITs"
+      - name: Prepare & Perform Release
+        run: mvn -B release:clean release:prepare release:perform release:prepare -Darguments="-Pkube -DtagNameFormat=v@{project.version} -Dregistry.hostname=ghcr.io -Dregistry.port=443 -Ddocker.context.path=openfilz/ -Djib.to.auth.username=${{ github.actor }} -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}"
 
       - name: Push changes
         run: |
@@ -93,6 +90,15 @@ jobs:
             target/*.pom
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge main -> develop
+        uses: devmasx/merge-branch@master
+        with:
+          type: now
+          from_branch: main
+          target_branch: develop
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
 
       - name: Merge on develop
         run: |
