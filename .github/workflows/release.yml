@@ -41,9 +41,8 @@ jobs:
         with:
           servers: |
             [{
-              "id": "git",
-              "username": "${{ github.actor }}",
-              "password": "${{ secrets.GITHUB_TOKEN }}"
+              "id": "github-actions@github.com",
+              "privateKey": "${{ secrets.DEPLOY_KEY }}"
             },
             {
                 "id": "central",
