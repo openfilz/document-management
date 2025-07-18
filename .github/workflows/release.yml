@@ -91,7 +91,9 @@ jobs:
           name: Release v${{ steps.version.outputs.substring }}
           body: ${{ steps.changelog.outputs.changelog }}
           fail_on_unmatched_files: false
-          files: "**/target/*.jar"
+          files: |
+            document-management-api/target/*${{ steps.version.outputs.substring }}.jar
+            document-management-gateway/target/*${{ steps.version.outputs.substring }}.jar
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
