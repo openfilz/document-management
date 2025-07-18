@@ -54,7 +54,7 @@ jobs:
         id: project
 
       - name: Remove SNAPSHOT from version
-        uses: spassai/get-between-action
+        uses: spassai/get-between-action@v1
         id: version
         with:
           string: ${{ steps.project.outputs.version }}"
