@@ -35,7 +35,7 @@
     <scm>
         <!-- Should be format scm:git:git or scm:git:https -->
         <connection>scm:git:https://github.com/openfilz/document-management.git</connection>
-        <developerConnection>[fetch=]scm:git:https://github.com/openfilz/document-management.git[push=]ssh://github-actions@github.com:openfilz/document-management.git</developerConnection>
+        <developerConnection>scm:git:ssh://github-actions@github.com:openfilz/document-management.git</developerConnection>
         <url>https://github.com/openfilz/document-management</url>
         <tag>HEAD</tag>
     </scm>
@@ -57,6 +57,7 @@
         <registry.port>5000</registry.port>
         <registry.scheme>https</registry.scheme>
         <docker.context.path>snapshots/</docker.context.path>
+        <project.scm.id>github-actions@github.com</project.scm.id>
     </properties>
 
     <modules>
