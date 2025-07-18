@@ -98,10 +98,3 @@ jobs:
           from_branch: main
           target_branch: develop
           github_token: ${{ secrets.GITHUB_TOKEN }}
-
-
-      - name: Merge on develop
-        run: |
-          git checkout develop
-          git merge main
-          git push
