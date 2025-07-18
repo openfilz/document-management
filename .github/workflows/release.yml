@@ -43,7 +43,7 @@ jobs:
             [{
               "id": "git",
               "username": "${{ github.actor }}",
-              "password": "${{ secrets.BOT_TOKEN }}"
+              "password": "${{ secrets.GITHUB_TOKEN }}"
             },
             {
                 "id": "central",
