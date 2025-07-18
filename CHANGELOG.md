@@ -4,21 +4,21 @@
 **[maven-release-plugin] prepare for next development iteration**
 
 
-[7b108be14dce635](https://github.com/openfilz/document-management/commit/7b108be14dce635) yanndemel *2025-07-17 23:59:14*
+[f5299b5d653659a](https://github.com/openfilz/document-management/commit/f5299b5d653659a) yanndemel *2025-07-18 00:35:45*
 
 
-## v1.0.10
+## document-management-1.0.11
 ### No issue
 
-**[maven-release-plugin] prepare release v1.0.10**
+**[maven-release-plugin] prepare release document-management-1.0.11**
 
 
-[64a849daba2b74d](https://github.com/openfilz/document-management/commit/64a849daba2b74d) yanndemel *2025-07-17 23:59:12*
+[07af0812661bb22](https://github.com/openfilz/document-management/commit/07af0812661bb22) yanndemel *2025-07-18 00:35:44*
 
-**Merge pull request #19**
+**Merge pull request #20 from openfilz/develop**
 
- * Release management
+ * develop
 
-[a78445d48e45371](https://github.com/openfilz/document-management/commit/a78445d48e45371) Yann Demel *2025-07-17 23:57:47*
+[6435fc5a5f203c0](https://github.com/openfilz/document-management/commit/6435fc5a5f203c0) Yann Demel *2025-07-18 00:34:08*
 
 
