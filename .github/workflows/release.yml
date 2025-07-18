@@ -50,7 +50,7 @@ jobs:
             }]
 
       - name: Prepare & Perform Release
-        run: mvn -B release:clean release:prepare release:perform release:prepare -Darguments="-Pkube -DtagNameFormat=v@{project.version} -Dregistry.hostname=ghcr.io -Dregistry.port=443 -Ddocker.context.path=openfilz/ -Djib.to.auth.username=${{ github.actor }} -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}"
+        run: mvn -B release:clean release:prepare release:perform -Darguments="-Pkube -DtagNameFormat=v@{project.version} -Dregistry.hostname=ghcr.io -Dregistry.port=443 -Ddocker.context.path=openfilz/ -Djib.to.auth.username=${{ github.actor }} -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}"
 
       - name: Push changes
         run: |
