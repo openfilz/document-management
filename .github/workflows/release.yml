@@ -57,7 +57,7 @@ jobs:
 
       - name: Get latest tag pushed
         id: tag
-        uses: 32teeth/action-github-tag@v1
+        uses: dawidd6/action-get-tag@v1
 
       - name: Generate Changelog
         run: mvn git-changelog-maven-plugin:git-changelog
