@@ -41,7 +41,7 @@ jobs:
             [{
               "id": "git",
               "username": "${{ github.actor }}",
-              "password": "${{ secrets.BOT_TOKEN }}"
+              "password": "${{ secrets.GITHUB_TOKEN }}"
             },
             {
                 "id": "central",
@@ -103,4 +103,4 @@ jobs:
           type: now
           from_branch: main
           target_branch: develop
-          github_token: ${{ secrets.BOT_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
