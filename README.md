@@ -11,7 +11,7 @@ Welcome to the next generation of document management. This isn't just another f
 
 ---
 
-## 📚 Related Components
+## 📚 Related Components 
 
 - [Document Management Gateway](./document-management-gateway/README.md): Learn about the API gateway, security, and how to access the system's Swagger UI.
 
