@@ -251,6 +251,19 @@ public class DocumentManagementLocalStorageIT {
         Assertions.assertEquals(1, uuids.size());
         Assertions.assertEquals(uploadResponse.id(), uuids.getFirst());
 
+        searchByMetadataRequest = new SearchByMetadataRequest(null, DocumentType.FILE, UUID.randomUUID(), null, Map.of("appId", uuid.toString()));
+
+        uuids = webTestClient.post().uri("/api/v1/documents/search/ids-by-metadata")
+                .body(BodyInserters.fromValue(searchByMetadataRequest))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody(new ParameterizedTypeReference<List<UUID>>() {
+                })
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(uuids);
+        Assertions.assertTrue(uuids.isEmpty());
+
         searchByMetadataRequest = new SearchByMetadataRequest("schema.sql", DocumentType.FILE, null, null, Map.of("appId", uuid.toString()));
 
         uuids = webTestClient.post().uri("/api/v1/documents/search/ids-by-metadata")
@@ -1543,5 +1556,129 @@ public class DocumentManagementLocalStorageIT {
                 .exchange()
                 .expectStatus().isNotFound();
 
+    }
+
+    @Test
+    void whenSearchAuditTrail_thenOK() {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("file", new ClassPathResource("schema.sql"));
+        String appId = UUID.randomUUID().toString();
+        builder.part("metadata", Map.of("owner", "OpenFilz", "appId", appId));
+
+        UploadResponse uploadResponse = webTestClient.post().uri(uri -> uri.path("/api/v1/documents/upload")
+                        .queryParam("allowDuplicateFileNames", true)
+                        .build())
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(uploadResponse);
+
+        List<AuditLog> auditTrail = webTestClient.post().uri("/api/v1/audit/search")
+                .body(BodyInserters.fromValue(new SearchByAuditLogRequest(null, null, null, null, Map.of("metadata", Map.of("appId", appId)))))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(AuditLog.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(auditTrail);
+        Assertions.assertEquals(1, auditTrail.size());
+
+        auditTrail = webTestClient.post().uri("/api/v1/audit/search")
+                .body(BodyInserters.fromValue(new SearchByAuditLogRequest(null, null, null, null, Map.of("metadata", Map.of("owner", "OpenFilz")))))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(AuditLog.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(auditTrail);
+        Assertions.assertTrue(!auditTrail.isEmpty());
+
+        auditTrail = webTestClient.post().uri("/api/v1/audit/search")
+                .body(BodyInserters.fromValue(new SearchByAuditLogRequest(null, null, null, null, Map.of("filename", "schema.sql"))))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(AuditLog.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(auditTrail);
+        Assertions.assertTrue(!auditTrail.isEmpty());
+
+        auditTrail = webTestClient.post().uri("/api/v1/audit/search")
+                .body(BodyInserters.fromValue(new SearchByAuditLogRequest(null, uploadResponse.id(), null, "UPLOAD_DOCUMENT", null)))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(AuditLog.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(auditTrail);
+        Assertions.assertTrue(!auditTrail.isEmpty());
+
+        RenameRequest renameRequest = new RenameRequest("new-name-for-search_audit.sql");
+
+        webTestClient.put().uri("/api/v1/files/{fileId}/rename", uploadResponse.id())
+                .body(BodyInserters.fromValue(renameRequest))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.name").isEqualTo("new-name-for-search_audit.sql");
+
+        auditTrail = webTestClient.post().uri("/api/v1/audit/search")
+                .body(BodyInserters.fromValue(new SearchByAuditLogRequest("anonymousUser", uploadResponse.id(), DocumentType.FILE, null, null)))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(AuditLog.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(auditTrail);
+        Assertions.assertEquals(2, auditTrail.size());
+
+    }
+
+    @Test
+    void whenGetAuditTrail_thenOK() {
+        CreateFolderRequest createFolderRequest = new CreateFolderRequest("folder-to-delete-for-audit", null);
+
+        FolderResponse folderResponse = webTestClient.post().uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(createFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(FolderResponse.class)
+                .returnResult().getResponseBody();
+
+        DeleteRequest deleteRequest = new DeleteRequest(Collections.singletonList(folderResponse.id()));
+
+        webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri("/api/v1/folders")
+                .body(BodyInserters.fromValue(deleteRequest))
+                .exchange()
+                .expectStatus().isNoContent();
+
+
+        List<AuditLog> auditTrail = webTestClient.get().uri(uri -> uri.path("/api/v1/audit/{id}")
+                        .build(folderResponse.id()))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(AuditLog.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(auditTrail);
+        Assertions.assertEquals(2, auditTrail.size());
+        Assertions.assertEquals("DELETE_FOLDER", auditTrail.get(0).action());;
+        Assertions.assertEquals("CREATE_FOLDER", auditTrail.get(1).action());
+
+        auditTrail = webTestClient.get().uri(uri -> uri.path("/api/v1/audit/{id}").queryParam("sort", SortOrder.ASC.name())
+                        .build(folderResponse.id()))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBodyList(AuditLog.class)
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(auditTrail);
+        Assertions.assertEquals(2, auditTrail.size());
+        Assertions.assertEquals("DELETE_FOLDER", auditTrail.get(1).action());;
+        Assertions.assertEquals("CREATE_FOLDER", auditTrail.get(0).action());
     }
 }

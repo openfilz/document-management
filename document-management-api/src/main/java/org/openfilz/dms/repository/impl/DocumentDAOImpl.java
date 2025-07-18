@@ -12,6 +12,8 @@ import reactor.core.publisher.Flux;
 
 import java.util.UUID;
 
+import static org.openfilz.dms.utils.SqlUtils.isFirst;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -79,12 +81,5 @@ public class DocumentDAOImpl implements DocumentDAO {
         return query.map( row -> row.get("id", UUID.class)).all();
     }
 
-    private boolean isFirst(boolean first, StringBuilder sql) {
-        if(!first) {
-            sql.append(" AND ");
-        } else {
-            first = false;
-        }
-        return first;
-    }
+
 }

@@ -4,13 +4,14 @@ package org.openfilz.dms.utils;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import reactor.core.publisher.Mono;
 
 
 public class UserPrincipalExtractor {
 
     private static final String ANONYMOUS_USER = "anonymousUser";
 
-    public static String getUsername(Authentication authentication) {
+    private static String getUsername(Authentication authentication) {
         if (authentication == null) {
             return ANONYMOUS_USER;
         }
@@ -25,5 +26,9 @@ public class UserPrincipalExtractor {
             return jwtAuthToken.getToken().getSubject(); // Or getClaimAsString("preferred_username")
         }
         return authentication.getName();
+    }
+
+    public static Mono<String> getConnectedUser(Authentication auth) {
+        return Mono.just(getUsername(auth));
     }
 }

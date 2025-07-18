@@ -43,6 +43,9 @@ public class JsonUtils {
     }
 
     public JsonNode toJsonNode(Json json) {
+        if(json ==null) {
+            return null;
+        }
         try {
             return objectMapper.readTree(json.asString());
         } catch (JsonProcessingException e) {

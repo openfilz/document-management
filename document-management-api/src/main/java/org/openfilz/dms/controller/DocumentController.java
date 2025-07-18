@@ -42,6 +42,7 @@ public class DocumentController {
     public static final String ATTACHMENT_ZIP = "attachment; filename=\"documents.zip\"";
 
     private final DocumentService documentService;
+
     private final ObjectMapper objectMapper; // For parsing metadata string
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

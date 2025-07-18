@@ -28,6 +28,6 @@ CREATE TABLE IF NOT EXISTS audit_logs (
           user_principal VARCHAR(255),
           action VARCHAR(255) NOT NULL,
           resource_type VARCHAR(100),
-          resource_id VARCHAR(255),
+          resource_id UUID,
           details JSONB
 );

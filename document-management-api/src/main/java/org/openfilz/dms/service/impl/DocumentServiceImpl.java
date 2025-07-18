@@ -63,11 +63,11 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional // Ensure R2DBC @Transactional is properly configured if complex operations span DB and FS
     public Mono<FolderResponse> createFolder(CreateFolderRequest request, Authentication auth) {
-        String username = UserPrincipalExtractor.getUsername(auth);
         if (request.name().contains(StorageService.FOLDER_SEPARATOR)) {
             return Mono.error(new OperationForbiddenException("Folder name should not contains any '/'"));
         }
-        return doCreateFolder(request, username, null, false, null)
+        return UserPrincipalExtractor.getConnectedUser(auth)
+                .flatMap(username -> doCreateFolder(request, username, null, false, null))
                 .flatMap(savedFolder -> Mono.just(new FolderResponse(savedFolder.getId(), savedFolder.getName(), savedFolder.getParentId())));
     }
 
@@ -126,21 +126,20 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Mono<UploadResponse> uploadDocument(FilePart filePart, Long contentLength, UUID parentFolderId, Map<String, Object> metadata, Boolean allowDuplicateFileNames, Authentication auth) {
-
-        String username = UserPrincipalExtractor.getUsername(auth);
         String originalFilename = filePart.filename().replace(StorageService.FILENAME_SEPARATOR, "");
-
-        if (parentFolderId != null) {
-            return documentRepository.existsByIdAndType(parentFolderId, FOLDER)
-                    .flatMap(exists -> {
-                        if (!exists) {
-                            return Mono.error(new DocumentNotFoundException(FOLDER, parentFolderId));
-                        }
-                        return doUploadDocument(filePart, contentLength, parentFolderId, metadata, originalFilename, allowDuplicateFileNames, username);
-                    });
-        }
-        return doUploadDocument(filePart, contentLength, null, metadata, originalFilename, allowDuplicateFileNames, username);
-
+        return UserPrincipalExtractor.getConnectedUser(auth)
+                .flatMap(username -> {
+                    if (parentFolderId != null) {
+                        return documentRepository.existsByIdAndType(parentFolderId, FOLDER)
+                                .flatMap(exists -> {
+                                    if (!exists) {
+                                        return Mono.error(new DocumentNotFoundException(FOLDER, parentFolderId));
+                                    }
+                                    return doUploadDocument(filePart, contentLength, parentFolderId, metadata, originalFilename, allowDuplicateFileNames, username);
+                                });
+                    }
+                    return doUploadDocument(filePart, contentLength, null, metadata, originalFilename, allowDuplicateFileNames, username);
+                });
     }
 
     private Mono<UploadResponse> doUploadDocument(FilePart filePart, Long contentLength, UUID parentFolderId, Map<String, Object> metadata, String originalFilename, Boolean allowDuplicateFileNames, String username) {
@@ -195,20 +194,19 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Mono<Resource> downloadDocument(UUID documentId, Authentication auth) {
-        String username = UserPrincipalExtractor.getUsername(auth);
-        return Mono.just(username).flatMap(_ -> documentRepository.findById(documentId))
+        return documentRepository.findById(documentId)
                 .switchIfEmpty(Mono.error(new DocumentNotFoundException(documentId)))
                 .filter(doc -> doc.getType() == FILE) // Ensure it's a file
                 .switchIfEmpty(Mono.error(new OperationForbiddenException("Cannot download a folder directly. ID: " + documentId)))
                 .flatMap(document -> storageService.loadFile(document.getStoragePath()))
-                .flatMap(r -> auditService.logAction(username, "DOWNLOAD_DOCUMENT", "FILE", documentId).thenReturn(r));
+                .flatMap(r -> UserPrincipalExtractor.getConnectedUser(auth).flatMap(username -> auditService.logAction(username, "DOWNLOAD_DOCUMENT", "FILE", documentId)).thenReturn(r));
     }
 
 
     @Override
     @Transactional
     public Mono<Void> deleteFiles(DeleteRequest request, Authentication auth) {
-        return getConnectedUser(auth).flatMap(username -> Flux.fromIterable(request.documentIds())
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMap(username -> Flux.fromIterable(request.documentIds())
                 .flatMap(docId -> documentRepository.findById(docId)
                         .switchIfEmpty(Mono.error(new DocumentNotFoundException(docId)))
                         .filter(doc -> doc.getType() == FILE) // Ensure it's a file
@@ -224,7 +222,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Mono<Void> deleteFolders(DeleteRequest request, Authentication auth) {
-        return getConnectedUser(auth).flatMap(username -> Flux.fromIterable(request.documentIds())
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMap(username -> Flux.fromIterable(request.documentIds())
                 .flatMap(folderId -> deleteFolderRecursive(folderId, username))
                 .then()
         );
@@ -260,10 +258,10 @@ public class DocumentServiceImpl implements DocumentService {
     @Transactional
     public Mono<Void> moveFiles(MoveRequest request, Authentication auth) {
         if(request.targetFolderId() == null) {
-            return getConnectedUser(auth).flatMap(username ->moveFiles(request, username));
+            return UserPrincipalExtractor.getConnectedUser(auth).flatMap(username ->moveFiles(request, username));
         }
 
-        return getConnectedUser(auth).flatMap(username -> {
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMap(username -> {
             // 1. Validate target folder exists and is a folder
             Mono<Document> targetFolderMono = documentRepository.findById(request.targetFolderId())
                     .switchIfEmpty(Mono.error(new DocumentNotFoundException(FOLDER, request.targetFolderId())))
@@ -295,7 +293,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Mono<Void> moveFolders(MoveRequest request, Authentication auth) {
-        return getConnectedUser(auth).flatMap(username -> {
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMap(username -> {
             Mono<Document> targetFolderMono = documentRepository.findById(request.targetFolderId())
                     .switchIfEmpty(Mono.error(new DocumentNotFoundException(FOLDER, request.targetFolderId())))
                     .filter(doc -> doc.getType() == DocumentType.FOLDER)
@@ -382,7 +380,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Flux<CopyResponse> copyFiles(CopyRequest request, Authentication auth) {
-        return getConnectedUser(auth).flatMapMany(username -> {
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMapMany(username -> {
             if (request.targetFolderId() == null) {
                 return doCopyFiles(request, username);
             }
@@ -486,7 +484,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Flux<UUID> copyFolders(CopyRequest request, Authentication auth) {
-        return getConnectedUser(auth).flatMapMany(username -> {
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMapMany(username -> {
             Mono<Document> targetFolderMono = documentRepository.findById(request.targetFolderId())
                     .switchIfEmpty(Mono.error(new DocumentNotFoundException(FOLDER, request.targetFolderId())))
                     .filter(doc -> doc.getType() == DocumentType.FOLDER)
@@ -556,7 +554,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Mono<Document> renameFile(UUID fileId, RenameRequest request, Authentication auth) {
-        return getConnectedUser(auth).flatMap(username -> documentRepository.findById(fileId)
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMap(username -> documentRepository.findById(fileId)
                 .switchIfEmpty(Mono.error(new DocumentNotFoundException(FILE, fileId)))
                 .filter(doc -> doc.getType() == FILE)
                 .switchIfEmpty(Mono.error(new OperationForbiddenException("Cannot rename folder using file rename API: " + fileId)))
@@ -588,7 +586,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Mono<Document> renameFolder(UUID folderId, RenameRequest request, Authentication auth) {
-        return getConnectedUser(auth).flatMap(username -> documentRepository.findById(folderId)
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMap(username -> documentRepository.findById(folderId)
                 .switchIfEmpty(Mono.error(new DocumentNotFoundException(FOLDER, folderId)))
                 .filter(doc -> doc.getType() == DocumentType.FOLDER)
                 .switchIfEmpty(Mono.error(new OperationForbiddenException("Cannot rename file using folder rename API: " + folderId)))
@@ -608,7 +606,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Mono<Document> replaceDocumentContent(UUID documentId, FilePart newFilePart, Long contentLength, Authentication auth) {
-        return getConnectedUser(auth).flatMap(username -> documentRepository.findById(documentId)
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMap(username -> documentRepository.findById(documentId)
                 .switchIfEmpty(Mono.error(new DocumentNotFoundException(documentId)))
                 .filter(doc -> doc.getType() == FILE) // Only files have content to replace
                 .switchIfEmpty(Mono.error(new OperationForbiddenException("Cannot replace content of a folder: " + documentId)))
@@ -653,7 +651,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Transactional
     public Mono<Document> replaceDocumentMetadata(UUID documentId, Map<String, Object> newMetadata, Authentication auth) {
 
-        return getConnectedUser(auth).flatMap(username ->
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMap(username ->
                 documentRepository.findById(documentId)
                         .switchIfEmpty(Mono.error(new DocumentNotFoundException(documentId)))
                         .flatMap(document -> {
@@ -670,14 +668,10 @@ public class DocumentServiceImpl implements DocumentService {
                                 List.of(new MapEntry("newMetadata", newMetadata))).thenReturn(updatedDoc)));
     }
 
-    private static Mono<String> getConnectedUser(Authentication auth) {
-        return Mono.just(UserPrincipalExtractor.getUsername(auth));
-    }
-
     @Override
     @Transactional
     public Mono<Document> updateDocumentMetadata(UUID documentId, UpdateMetadataRequest request, Authentication auth) {
-        return getConnectedUser(auth).flatMap(username -> documentRepository.findById(documentId)
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMap(username -> documentRepository.findById(documentId)
                 .switchIfEmpty(Mono.error(new DocumentNotFoundException(documentId)))
                 .flatMap(document -> {
                     JsonNode currentMetadata = jsonUtils.toJsonNode(document.getMetadata());
@@ -705,7 +699,7 @@ public class DocumentServiceImpl implements DocumentService {
     @Override
     @Transactional
     public Mono<Void> deleteDocumentMetadata(UUID documentId, DeleteMetadataRequest request, Authentication auth) {
-        return getConnectedUser(auth).flatMap(username ->
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMap(username ->
                 documentRepository.findById(documentId)
                         .switchIfEmpty(Mono.error(new DocumentNotFoundException(documentId)))
                         .flatMap(document -> {
@@ -730,7 +724,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Mono<Resource> downloadMultipleDocumentsAsZip(List<UUID> documentIds, Authentication auth) {
-        return getConnectedUser(auth).flatMap(username -> {
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMap(username -> {
             if (documentIds == null || documentIds.isEmpty()) {
                 return Mono.error(new IllegalArgumentException("Document IDs list cannot be empty."));
             }
@@ -801,12 +795,12 @@ public class DocumentServiceImpl implements DocumentService {
 
     @Override
     public Flux<UUID> searchDocumentIdsByMetadata(SearchByMetadataRequest request, Authentication auth) {
-        return getConnectedUser(auth).flatMapMany(_ -> documentDAO.listDocumentIds(request));
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMapMany(_ -> documentDAO.listDocumentIds(request));
     }
 
     @Override
     public Mono<Map<String, Object>> getDocumentMetadata(UUID documentId, SearchMetadataRequest request, Authentication auth) {
-        return getConnectedUser(auth).flatMap(username ->
+        return UserPrincipalExtractor.getConnectedUser(auth).flatMap(username ->
                 documentRepository.findById(documentId)
                         .switchIfEmpty(Mono.error(new DocumentNotFoundException(documentId)))
                         .map(document -> {

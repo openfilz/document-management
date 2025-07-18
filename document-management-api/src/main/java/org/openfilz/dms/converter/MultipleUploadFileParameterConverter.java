@@ -1,4 +1,4 @@
-package org.openfilz.dms.config;
+package org.openfilz.dms.converter;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
