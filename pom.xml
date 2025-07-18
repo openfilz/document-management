@@ -4,7 +4,7 @@
 
     <groupId>org.openfilz</groupId>
     <artifactId>document-management</artifactId>
-    <version>1.0.36-SNAPSHOT</version>
+    <version>1.0.25-SNAPSHOT</version>
     <packaging>pom</packaging>
     <url>https://github.com/openfilz/document-management</url>
 
@@ -35,9 +35,9 @@
     <scm>
         <!-- Should be format scm:git:git or scm:git:https -->
         <connection>scm:git:https://github.com/openfilz/document-management.git</connection>
-        <developerConnection>scm:git:git@github.com:openfilz/document-management.git</developerConnection>
+        <developerConnection>scm:git:https://github.com/openfilz/document-management.git</developerConnection>
         <url>https://github.com/openfilz/document-management</url>
-        <tag>v1.0.29</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>
