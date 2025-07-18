@@ -91,8 +91,8 @@ jobs:
           name: Release v${{ steps.version.outputs.substring }}
           body: ${{ steps.changelog.outputs.changelog }}
           files: |
-            /**/target/*.jar
-            /**/target/*.pom
+            **/target/*.jar
+            **/target/*.pom
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
