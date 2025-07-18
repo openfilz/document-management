@@ -4,7 +4,7 @@
     <parent>
         <groupId>org.openfilz</groupId>
         <artifactId>document-management</artifactId>
-        <version>1.0.13-SNAPSHOT</version>
+        <version>1.0.14-SNAPSHOT</version>
     </parent>
 
     <artifactId>document-management-gateway</artifactId>
