@@ -50,7 +50,7 @@ jobs:
             }]
 
       - name: Extract Maven project version
-        run: echo ::set-output name=version::$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)
+        run: echo "version=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)" >> $GITHUB_OUTPUT
         id: project
 
       - name: Remove SNAPSHOT from version
@@ -91,8 +91,8 @@ jobs:
           name: Release v${{ steps.version.outputs.substring }}
           body: ${{ steps.changelog.outputs.changelog }}
           files: |
-            target/*.jar
-            target/*.pom
+            /**/target/*.jar
+            /**/target/*.pom
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
