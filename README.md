@@ -1,6 +1,6 @@
 ![image](./.github/badges/jacoco.svg)
 ![image](./.github/badges/branches.svg)
-![Maven Central Version](https://img.shields.io/maven-central/v/org.openfilz/document-management-api)~~~~
+![Maven Central Version](https://img.shields.io/maven-central/v/org.openfilz/document-management-api)
 
 # 🚀 **_OpenFilz_** Document Management API: Modern, Reactive, and Secure 🚀
 
