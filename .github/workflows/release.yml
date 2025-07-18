@@ -49,8 +49,12 @@ jobs:
                 "password": "${{ secrets.MAVEN_PASSWORD }}"
             }]
 
-      - name: Prepare & Perform Release
-        run: mvn -B release:clean release:prepare release:perform -Darguments="-Pkube -DtagNameFormat=v@{project.version} -Dregistry.hostname=ghcr.io -Dregistry.port=443 -Ddocker.context.path=openfilz/ -Djib.to.auth.username=${{ github.actor }} -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}"
+      - name: Prepare Release
+        run: mvn -B release:prepare -DtagNameFormat=v@{project.version} -DskipTests -Dgpg.skip
+
+      - name: Perform Release
+        run: mvn -B release:perform -Darguments="-P=kube -Dregistry.hostname=ghcr.io -Dregistry.port=443 -Ddocker.context.path=openfilz/ -Djib.to.auth.username=${{ github.actor }} -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}"
+
 
       - name: Push changes
         run: |
