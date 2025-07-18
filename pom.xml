@@ -57,7 +57,6 @@
         <registry.port>5000</registry.port>
         <registry.scheme>https</registry.scheme>
         <docker.context.path>snapshots/</docker.context.path>
-        <project.scm.id>github-actions@github.com</project.scm.id>
     </properties>
 
     <modules>
