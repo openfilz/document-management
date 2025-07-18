@@ -79,8 +79,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.project.outputs.version }}
-          name: Release v${{ steps.project.outputs.version }}
+          tag_name: v${{ steps.tag.outputs.tag }}
+          name: Release v${{ steps.tag.outputs.tag }}
           body: ${{ steps.changelog.outputs.changelog }}
           files: |
             target/*.jar
