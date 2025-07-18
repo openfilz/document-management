@@ -1,3 +1,4 @@
+[![Java CI with Maven](https://github.com/openfilz/document-management/actions/workflows/build.yml/badge.svg)](https://github.com/openfilz/document-management/actions/workflows/build.yml)
 ![image](./.github/badges/jacoco.svg)
 ![image](./.github/badges/branches.svg)
 ![Maven Central Version](https://img.shields.io/maven-central/v/org.openfilz/document-management-api)
