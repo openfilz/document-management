@@ -121,4 +121,4 @@ jobs:
         if: always()
         run: |
           rm -f ~/.git-credentials
-          git config --global --unset credential-helper || true
+          git config --global --unset credential.helper || true
