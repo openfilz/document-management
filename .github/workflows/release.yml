@@ -115,7 +115,7 @@ jobs:
           type: now
           from_branch: main
           target_branch: develop
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ steps.app-token.outputs.token }}
 
       - name: Cleanup credentials
         if: always()
