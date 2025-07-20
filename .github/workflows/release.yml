@@ -120,5 +120,5 @@ jobs:
       - name: Cleanup credentials
         if: always()
         run: |
-          rm - f ~/.git-credentials
-          git config --unset credential-helper || true
+          rm -f ~/.git-credentials
+          git config --global --unset credential-helper || true
