@@ -124,3 +124,4 @@ sequenceDiagram
     API-->>-GW: Response
     GW-->>-C: Final Response
 ```
+
