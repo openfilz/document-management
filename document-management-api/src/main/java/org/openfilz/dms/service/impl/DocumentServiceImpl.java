@@ -10,6 +10,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.openfilz.dms.dto.*;
 import org.openfilz.dms.entity.Document;
+import org.openfilz.dms.enums.AuditAction;
 import org.openfilz.dms.enums.DocumentType;
 import org.openfilz.dms.exception.DocumentNotFoundException;
 import org.openfilz.dms.exception.DuplicateNameException;
@@ -43,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.openfilz.dms.enums.AuditAction.*;
 import static org.openfilz.dms.enums.DocumentType.FILE;
 import static org.openfilz.dms.enums.DocumentType.FOLDER;
 
@@ -90,10 +92,10 @@ public class DocumentServiceImpl implements DocumentService {
                     return saveFolderInRepository(request, username, folderMetadata);
                 }).flatMap(savedFolder -> {
                     if (auditDetails == null) {
-                        return auditService.logAction(username, copy ? "COPY_FOLDER" : "CREATE_FOLDER", "FOLDER", savedFolder.getId(), request)
+                        return auditService.logAction(username, copy ? AuditAction.COPY_FOLDER : AuditAction.CREATE_FOLDER, FOLDER, savedFolder.getId(), request)
                                 .thenReturn(savedFolder);
                     }
-                    return auditService.logAction(username, copy ? "COPY_FOLDER" : "CREATE_FOLDER", "FOLDER", savedFolder.getId(), auditDetails)
+                    return auditService.logAction(username, copy ? AuditAction.COPY_FOLDER : AuditAction.CREATE_FOLDER, FOLDER, savedFolder.getId(), auditDetails)
                             .thenReturn(savedFolder);
                 });
 
@@ -160,7 +162,7 @@ public class DocumentServiceImpl implements DocumentService {
     }
 
     private Mono<UploadResponse> auditUploadActionAndReturnResponse(UUID parentFolderId, Map<String, Object> metadata, String username, Document savedDoc) {
-        return auditService.logAction(username, "UPLOAD_DOCUMENT", "FILE", savedDoc.getId(),
+        return auditService.logAction(username, AuditAction.UPLOAD_DOCUMENT, FILE, savedDoc.getId(),
                         List.of(new MapEntry("filename", savedDoc.getName()), new MapEntry("parentId", parentFolderId), new MapEntry("metadata", metadata)))
                 .thenReturn(new UploadResponse(savedDoc.getId(), savedDoc.getName(), savedDoc.getContentType(), savedDoc.getSize()));
     }
@@ -199,7 +201,7 @@ public class DocumentServiceImpl implements DocumentService {
                 .filter(doc -> doc.getType() == FILE) // Ensure it's a file
                 .switchIfEmpty(Mono.error(new OperationForbiddenException("Cannot download a folder directly. ID: " + documentId)))
                 .flatMap(document -> storageService.loadFile(document.getStoragePath()))
-                .flatMap(r -> UserPrincipalExtractor.getConnectedUser(auth).flatMap(username -> auditService.logAction(username, "DOWNLOAD_DOCUMENT", "FILE", documentId)).thenReturn(r));
+                .flatMap(r -> UserPrincipalExtractor.getConnectedUser(auth).flatMap(username -> auditService.logAction(username, AuditAction.DOWNLOAD_DOCUMENT, FILE, documentId)).thenReturn(r));
     }
 
 
@@ -213,7 +215,7 @@ public class DocumentServiceImpl implements DocumentService {
                         .switchIfEmpty(Mono.error(new OperationForbiddenException("ID " + docId + " is a folder. Use delete folders API.")))
                         .flatMap(document -> storageService.deleteFile(document.getStoragePath())
                                 .then(documentRepository.delete(document)))
-                        .then(auditService.logAction(username, "DELETE_FILE", "FILE", docId))
+                        .then(auditService.logAction(username, AuditAction.DELETE_FILE, FILE, docId))
                 )
                 .then());
     }
@@ -238,7 +240,7 @@ public class DocumentServiceImpl implements DocumentService {
                     Mono<Void> deleteChildFiles = documentRepository.findByParentIdAndType(folderId, FILE)
                             .flatMap(file -> storageService.deleteFile(file.getStoragePath())
                                     .then(documentRepository.delete(file))
-                                    .then(auditService.logAction(username, "DELETE_FILE_CHILD", "FILE", file.getId(), List.of(new MapEntry("parentFolderId", folderId))))
+                                    .then(auditService.logAction(username, DELETE_FILE_CHILD, FILE, file.getId(), List.of(new MapEntry("parentFolderId", folderId))))
                             ).then();
 
                     // 2. Recursively delete child folders
@@ -249,7 +251,7 @@ public class DocumentServiceImpl implements DocumentService {
                     // 3. Delete the folder itself from DB (and storage if it had a physical representation)
                     return Mono.when(deleteChildFiles, deleteChildFolders)
                             .then(documentRepository.delete(folder))
-                            .then(auditService.logAction(username, "DELETE_FOLDER", "FOLDER", folderId));
+                            .then(auditService.logAction(username, AuditAction.DELETE_FOLDER, FOLDER, folderId));
                 });
     }
 
@@ -283,7 +285,7 @@ public class DocumentServiceImpl implements DocumentService {
                         .flatMap(fileToMove -> {
                             // Check for name collision in target folder
                             return moveDocument(request, username, fileToMove)
-                                    .flatMap(movedFile -> auditService.logAction(username, "MOVE_FILE", "FILE", movedFile.getId(),
+                                    .flatMap(movedFile -> auditService.logAction(username, MOVE_FILE, FILE, movedFile.getId(),
                                             List.of(new MapEntry("targetFolderId", request.targetFolderId()))));
                         })
                 )
@@ -320,7 +322,7 @@ public class DocumentServiceImpl implements DocumentService {
                                             .flatMap(folderToMove -> {
                                                 // Check for name collision in target folder
                                                 return moveDocument(request, username, folderToMove)
-                                                        .flatMap(movedFolder -> auditService.logAction(username, "MOVE_FOLDER", "FOLDER", movedFolder.getId(),
+                                                        .flatMap(movedFolder -> auditService.logAction(username, MOVE_FOLDER, FOLDER, movedFolder.getId(),
                                                                 List.of(new MapEntry("targetFolderId", request.targetFolderId()))));
                                             });
                                 });
@@ -420,7 +422,7 @@ public class DocumentServiceImpl implements DocumentService {
                                                     .build();
                                             return documentRepository.save(copiedFile);
                                         })
-                                        .flatMap(cf -> auditService.logAction(username, "COPY_FILE", "FILE", cf.getId(),
+                                        .flatMap(cf -> auditService.logAction(username, COPY_FILE, FILE, cf.getId(),
                                                         List.of(new MapEntry("sourceFileId", fileIdToCopy), new MapEntry("targetFolderId", request.targetFolderId()), new MapEntry("copîedFileId", cf.getId())))
                                                 .thenReturn(new CopyResponse(fileIdToCopy, cf.getId()))))
                         )
@@ -537,7 +539,7 @@ public class DocumentServiceImpl implements DocumentService {
                                                                         .build();
                                                                 return documentRepository.save(copiedChildFile);
                                                             })
-                                                            .flatMap(ccf -> auditService.logAction(username, "COPY_FILE_CHILD", "FILE", ccf.getId(),
+                                                            .flatMap(ccf -> auditService.logAction(username, COPY_FILE_CHILD, FILE, ccf.getId(),
                                                                     List.of(new MapEntry("sourceFileId", childFile.getId()), new MapEntry("targetParentFolderId", newFolderId))).thenReturn(ccf)));
                                         });
 
@@ -563,7 +565,7 @@ public class DocumentServiceImpl implements DocumentService {
                     Mono<Boolean> duplicateCheck = documentExists(request.newName(), fileToRename.getParentId());
                     return saveFileToRename(request, username, fileToRename, duplicateCheck);
                 })
-                .flatMap(renamedFile -> auditService.logAction(username, "RENAME_FILE", "FILE", renamedFile.getId(),
+                .flatMap(renamedFile -> auditService.logAction(username, RENAME_FILE, FILE, renamedFile.getId(),
                         List.of(new MapEntry("newName", request.newName()))).thenReturn(renamedFile)));
     }
 
@@ -598,7 +600,7 @@ public class DocumentServiceImpl implements DocumentService {
 
                     return saveFileToRename(request, username, folderToRename, duplicateCheck);
                 })
-                .flatMap(renamedFolder -> auditService.logAction(username, "RENAME_FOLDER", "FOLDER", renamedFolder.getId(),
+                .flatMap(renamedFolder -> auditService.logAction(username, RENAME_FOLDER, FOLDER, renamedFolder.getId(),
                         List.of(new MapEntry("newName", request.newName()))).thenReturn(renamedFolder)));
     }
 
@@ -642,7 +644,7 @@ public class DocumentServiceImpl implements DocumentService {
                     }
                     return Mono.just(savedDoc);
                 })
-                .flatMap(updatedDoc -> auditService.logAction(username, "REPLACE_DOCUMENT_CONTENT", "FILE", updatedDoc.getId(),
+                .flatMap(updatedDoc -> auditService.logAction(username, REPLACE_DOCUMENT_CONTENT, FILE, updatedDoc.getId(),
                         List.of(new MapEntry("newFileName", newFilePart.filename()))))
                 .thenReturn(document);
     }
@@ -664,7 +666,7 @@ public class DocumentServiceImpl implements DocumentService {
                                 return Mono.error(new RuntimeException("Error processing metadata for replacement: " + e.getMessage()));
                             }
                         })
-                        .flatMap(updatedDoc -> auditService.logAction(username, "REPLACE_DOCUMENT_METADATA", updatedDoc.getType().name(), updatedDoc.getId(),
+                        .flatMap(updatedDoc -> auditService.logAction(username, REPLACE_DOCUMENT_METADATA, updatedDoc.getType(), updatedDoc.getId(),
                                 List.of(new MapEntry("newMetadata", newMetadata))).thenReturn(updatedDoc)));
     }
 
@@ -691,7 +693,7 @@ public class DocumentServiceImpl implements DocumentService {
                     document.setUpdatedBy(username);
                     return documentRepository.save(document);
                 })
-                .flatMap(updatedDoc -> auditService.logAction(username, "UPDATE_DOCUMENT_METADATA", updatedDoc.getType().name(), updatedDoc.getId(),
+                .flatMap(updatedDoc -> auditService.logAction(username, UPDATE_DOCUMENT_METADATA, updatedDoc.getType(), updatedDoc.getId(),
                         List.of(new MapEntry("updatedKeys", request.metadataToUpdate().keySet()))).thenReturn(updatedDoc)));
     }
 
@@ -716,7 +718,7 @@ public class DocumentServiceImpl implements DocumentService {
                             document.setUpdatedBy(username);
                             return documentRepository.save(document);
                         })
-                        .flatMap(updatedDoc -> auditService.logAction(username, "DELETE_DOCUMENT_METADATA", updatedDoc.getType().name(), updatedDoc.getId(),
+                        .flatMap(updatedDoc -> auditService.logAction(username, DELETE_DOCUMENT_METADATA, updatedDoc.getType(), updatedDoc.getId(),
                                 List.of(new MapEntry("deletedKeys", request.metadataKeysToDelete()))))
         );
     }

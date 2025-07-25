@@ -14,6 +14,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.openfilz.dms.dto.*;
 import org.openfilz.dms.entity.Document;
+import org.openfilz.dms.enums.AuditAction;
 import org.openfilz.dms.enums.DocumentType;
 import org.openfilz.dms.exception.DocumentNotFoundException;
 import org.openfilz.dms.exception.DuplicateNameException;
@@ -39,6 +40,9 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
+import static org.openfilz.dms.enums.AuditAction.*;
+import static org.openfilz.dms.enums.DocumentType.FILE;
+import static org.openfilz.dms.enums.DocumentType.FOLDER;
 
 @ExtendWith(MockitoExtension.class)
 class DocumentServiceImplTest {
@@ -79,7 +83,7 @@ class DocumentServiceImplTest {
                 .id(UUID.randomUUID())
                 .name(request.name())
                 .parentId(request.parentId())
-                .type(DocumentType.FOLDER)
+                .type(FOLDER)
                 .createdAt(OffsetDateTime.now())
                 .updatedAt(OffsetDateTime.now())
                 .createdBy("testuser")
@@ -87,10 +91,10 @@ class DocumentServiceImplTest {
                 .metadata(Json.of("{}"))
                 .build();
 
-        when(documentRepository.existsByIdAndType(parentId, DocumentType.FOLDER)).thenReturn(Mono.just(true));
+        when(documentRepository.existsByIdAndType(parentId, FOLDER)).thenReturn(Mono.just(true));
         when(documentRepository.existsByNameAndParentId(request.name(), request.parentId())).thenReturn(Mono.just(false));
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(savedFolder));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), (Record) any())).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), (Record) any())).thenReturn(Mono.empty());
 
         Mono<FolderResponse> result = documentService.createFolder(request, mockAuthentication);
 
@@ -100,7 +104,7 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         verify(documentRepository).save(any(Document.class));
-        verify(auditService).logAction(eq("testuser"), eq("CREATE_FOLDER"), eq("FOLDER"),
+        verify(auditService).logAction(eq("testuser"), eq(CREATE_FOLDER), eq(FOLDER),
                 eq(savedFolder.getId()), eq(request));
     }
 
@@ -111,7 +115,7 @@ class DocumentServiceImplTest {
                 .id(UUID.randomUUID())
                 .name(request.name())
                 .parentId(null)
-                .type(DocumentType.FOLDER)
+                .type(FOLDER)
                 .createdAt(OffsetDateTime.now())
                 .updatedAt(OffsetDateTime.now())
                 .createdBy("testuser")
@@ -121,7 +125,7 @@ class DocumentServiceImplTest {
 
         when(documentRepository.existsByNameAndParentIdIsNull(request.name())).thenReturn(Mono.just(false));
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(savedFolder));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), (Record) any())).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), (Record) any())).thenReturn(Mono.empty());
 
         Mono<FolderResponse> result = documentService.createFolder(request, mockAuthentication);
 
@@ -130,7 +134,7 @@ class DocumentServiceImplTest {
                         response.parentId() == null)
                 .verifyComplete();
 
-        verify(auditService).logAction(eq("testuser"), eq("CREATE_FOLDER"), eq("FOLDER"),
+        verify(auditService).logAction(eq("testuser"), eq(CREATE_FOLDER), eq(FOLDER),
                 eq(savedFolder.getId()), eq(request));
     }
 
@@ -158,11 +162,11 @@ class DocumentServiceImplTest {
         HttpHeaders headers = new HttpHeaders();
         headers.add(HttpHeaders.CONTENT_TYPE, "text/plain");
         when(filePart.headers()).thenReturn(headers);
-        when(documentRepository.existsByIdAndType(parentId, DocumentType.FOLDER)).thenReturn(Mono.just(true));
+        when(documentRepository.existsByIdAndType(parentId, FOLDER)).thenReturn(Mono.just(true));
         when(documentRepository.existsByNameAndParentId(filename, parentId)).thenReturn(Mono.just(false));
         when(jsonUtils.toJson(metadata)).thenReturn(Json.of("{}"));
-        when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(Document.builder().id(UUID.randomUUID()).name(filename).type(DocumentType.FILE).build()));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
+        when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(Document.builder().id(UUID.randomUUID()).name(filename).type(FILE).build()));
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
         when(storageService.saveFile(filePart)).thenReturn(Mono.just("storage/path"));
 
         Mono<UploadResponse> result = documentService.uploadDocument(filePart, 123L, parentId, metadata, false, mockAuthentication);
@@ -177,7 +181,7 @@ class DocumentServiceImplTest {
         UUID parentId = UUID.randomUUID();
         FilePart filePart = mock(FilePart.class);
         when(filePart.filename()).thenReturn("file.txt");
-        when(documentRepository.existsByIdAndType(parentId, DocumentType.FOLDER)).thenReturn(Mono.just(false));
+        when(documentRepository.existsByIdAndType(parentId, FOLDER)).thenReturn(Mono.just(false));
 
         Mono<UploadResponse> result = documentService.uploadDocument(filePart, 123L, parentId, Map.of(), false, mockAuthentication);
 
@@ -189,11 +193,11 @@ class DocumentServiceImplTest {
     @Test
     void downloadDocument_success() {
         UUID docId = UUID.randomUUID();
-        Document doc = Document.builder().id(docId).type(DocumentType.FILE).storagePath("path").build();
+        Document doc = Document.builder().id(docId).type(FILE).storagePath("path").build();
         when(documentRepository.findById(docId)).thenReturn(Mono.just(doc));
         Resource resource = mock(Resource.class);
         doReturn(Mono.just(resource)).when(storageService).loadFile(anyString());
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class))).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class))).thenReturn(Mono.empty());
 
         Mono<Resource> result = documentService.downloadDocument(docId, mockAuthentication);
 
@@ -206,9 +210,9 @@ class DocumentServiceImplTest {
     void deleteFiles_notAFile_shouldError() {
         UUID fileId = UUID.randomUUID();
         DeleteRequest request = new DeleteRequest(List.of(fileId));
-        Document folder = Document.builder().id(fileId).type(DocumentType.FOLDER).build();
+        Document folder = Document.builder().id(fileId).type(FOLDER).build();
         when(documentRepository.findById(fileId)).thenReturn(Mono.just(folder));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class))).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class))).thenReturn(Mono.empty());
 
         Mono<Void> result = documentService.deleteFiles(request, mockAuthentication);
 
@@ -221,13 +225,13 @@ class DocumentServiceImplTest {
     void deleteFolders_success() {
         UUID folderId = UUID.randomUUID();
         DeleteRequest request = new DeleteRequest(List.of(folderId));
-        Document folder = Document.builder().id(folderId).type(DocumentType.FOLDER).build();
+        Document folder = Document.builder().id(folderId).type(FOLDER).build();
 
         when(documentRepository.findById(folderId)).thenReturn(Mono.just(folder));
-        when(documentRepository.findByParentIdAndType(folderId, DocumentType.FILE)).thenReturn(Flux.empty());
-        when(documentRepository.findByParentIdAndType(folderId, DocumentType.FOLDER)).thenReturn(Flux.empty());
+        when(documentRepository.findByParentIdAndType(folderId, FILE)).thenReturn(Flux.empty());
+        when(documentRepository.findByParentIdAndType(folderId, FOLDER)).thenReturn(Flux.empty());
         when(documentRepository.delete(folder)).thenReturn(Mono.empty());
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class))).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class))).thenReturn(Mono.empty());
 
         Mono<Void> result = documentService.deleteFolders(request, mockAuthentication);
 
@@ -235,7 +239,7 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         verify(documentRepository).delete(folder);
-        verify(auditService).logAction(eq("testuser"), eq("DELETE_FOLDER"), eq("FOLDER"), eq(folderId));
+        verify(auditService).logAction(eq("testuser"), eq(DELETE_FOLDER), eq(FOLDER), eq(folderId));
     }
 
     @Test
@@ -243,14 +247,14 @@ class DocumentServiceImplTest {
         UUID fileId = UUID.randomUUID();
         UUID targetFolderId = UUID.randomUUID();
         MoveRequest request = new MoveRequest(List.of(fileId), targetFolderId, false);
-        Document fileToMove = Document.builder().id(fileId).type(DocumentType.FILE).build();
-        Document targetFolder = Document.builder().id(targetFolderId).type(DocumentType.FOLDER).build();
+        Document fileToMove = Document.builder().id(fileId).type(FILE).build();
+        Document targetFolder = Document.builder().id(targetFolderId).type(FOLDER).build();
 
         when(documentRepository.findById(fileId)).thenReturn(Mono.just(fileToMove));
         when(documentRepository.findById(targetFolderId)).thenReturn(Mono.just(targetFolder));
         when(documentRepository.existsByNameAndParentId(any(), any())).thenReturn(Mono.just(false));
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(fileToMove));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
 
         Mono<Void> result = documentService.moveFiles(request, mockAuthentication);
 
@@ -258,7 +262,7 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         verify(documentRepository).save(any(Document.class));
-        verify(auditService).logAction(eq("testuser"), eq("MOVE_FILE"), eq("FILE"), eq(fileId), any(List.class));
+        verify(auditService).logAction(eq("testuser"), eq(MOVE_FILE), eq(FILE), eq(fileId), any(List.class));
     }
 
     @Test
@@ -266,14 +270,14 @@ class DocumentServiceImplTest {
         UUID folderId = UUID.randomUUID();
         UUID targetFolderId = UUID.randomUUID();
         MoveRequest request = new MoveRequest(List.of(folderId), targetFolderId, false);
-        Document folderToMove = Document.builder().id(folderId).type(DocumentType.FOLDER).build();
-        Document targetFolder = Document.builder().id(targetFolderId).type(DocumentType.FOLDER).build();
+        Document folderToMove = Document.builder().id(folderId).type(FOLDER).build();
+        Document targetFolder = Document.builder().id(targetFolderId).type(FOLDER).build();
 
         when(documentRepository.findById(folderId)).thenReturn(Mono.just(folderToMove));
         when(documentRepository.findById(targetFolderId)).thenReturn(Mono.just(targetFolder));
         when(documentRepository.existsByNameAndParentId(any(), any())).thenReturn(Mono.just(false));
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(folderToMove));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
         //when(documentService.isDescendant(any(), any())).thenReturn(Mono.just(false));
 
         Mono<Void> result = documentService.moveFolders(request, mockAuthentication);
@@ -282,7 +286,7 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         verify(documentRepository).save(any(Document.class));
-        verify(auditService).logAction(eq("testuser"), eq("MOVE_FOLDER"), eq("FOLDER"), eq(folderId), any(List.class));
+        verify(auditService).logAction(eq("testuser"), eq(MOVE_FOLDER), eq(FOLDER), eq(folderId), any(List.class));
     }
 
     @Test
@@ -290,16 +294,16 @@ class DocumentServiceImplTest {
         UUID fileId = UUID.randomUUID();
         UUID targetFolderId = UUID.randomUUID();
         CopyRequest request = new CopyRequest(List.of(fileId), targetFolderId, false);
-        Document fileToCopy = Document.builder().id(fileId).name("file-to-copy").type(DocumentType.FILE).storagePath("original-path").build();
-        Document targetFolder = Document.builder().id(targetFolderId).type(DocumentType.FOLDER).build();
-        Document copiedFile = Document.builder().id(UUID.randomUUID()).name("file-to-copy").type(DocumentType.FILE).storagePath("new-path").build();
+        Document fileToCopy = Document.builder().id(fileId).name("file-to-copy").type(FILE).storagePath("original-path").build();
+        Document targetFolder = Document.builder().id(targetFolderId).type(FOLDER).build();
+        Document copiedFile = Document.builder().id(UUID.randomUUID()).name("file-to-copy").type(FILE).storagePath("new-path").build();
 
         when(documentRepository.findById(fileId)).thenReturn(Mono.just(fileToCopy));
         when(documentRepository.findById(targetFolderId)).thenReturn(Mono.just(targetFolder));
         when(documentRepository.existsByNameAndParentId("file-to-copy", targetFolderId)).thenReturn(Mono.just(false));
         when(storageService.copyFile(anyString())).thenReturn(Mono.just("new-path"));
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(copiedFile));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
         when(jsonUtils.cloneOrNewEmptyJson(any())).thenReturn(Json.of("{}"));
 
         Flux<CopyResponse> result = documentService.copyFiles(request, mockAuthentication);
@@ -309,7 +313,7 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         verify(documentRepository).save(any(Document.class));
-        verify(auditService).logAction(eq("testuser"), eq("COPY_FILE"), eq("FILE"), any(UUID.class), any(List.class));
+        verify(auditService).logAction(eq("testuser"), eq(COPY_FILE), eq(FILE), any(UUID.class), any(List.class));
     }
 
     @Test
@@ -317,16 +321,16 @@ class DocumentServiceImplTest {
         UUID folderId = UUID.randomUUID();
         UUID targetFolderId = UUID.randomUUID();
         CopyRequest request = new CopyRequest(List.of(folderId), targetFolderId, false);
-        Document folderToCopy = Document.builder().id(folderId).type(DocumentType.FOLDER).name("folder").build();
-        Document targetFolder = Document.builder().id(targetFolderId).type(DocumentType.FOLDER).build();
-        Document copiedFolder = Document.builder().id(UUID.randomUUID()).type(DocumentType.FOLDER).build();
+        Document folderToCopy = Document.builder().id(folderId).type(FOLDER).name("folder").build();
+        Document targetFolder = Document.builder().id(targetFolderId).type(FOLDER).build();
+        Document copiedFolder = Document.builder().id(UUID.randomUUID()).type(FOLDER).build();
 
         when(documentRepository.findById(folderId)).thenReturn(Mono.just(folderToCopy));
         when(documentRepository.findById(targetFolderId)).thenReturn(Mono.just(targetFolder));
         when(documentRepository.existsByNameAndParentId(any(), any())).thenReturn(Mono.just(false));
         when(documentRepository.existsByIdAndType(any(), any())).thenReturn(Mono.just(true));
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(copiedFolder));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
         when(jsonUtils.cloneOrNewEmptyJson(any())).thenReturn(Json.of("{}"));
         when(documentRepository.findByParentIdAndType(any(), any(DocumentType.class))).thenReturn(Flux.empty());
 
@@ -337,19 +341,19 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         verify(documentRepository, times(1)).save(any(Document.class));
-        verify(auditService, times(1)).logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class));
+        verify(auditService, times(1)).logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), any(List.class));
     }
 
     @Test
     void renameFile_success() {
         UUID fileId = UUID.randomUUID();
         RenameRequest request = new RenameRequest("new-name.txt");
-        Document fileToRename = Document.builder().id(fileId).type(DocumentType.FILE).name("old-name.txt").build();
+        Document fileToRename = Document.builder().id(fileId).type(FILE).name("old-name.txt").build();
 
         when(documentRepository.findById(fileId)).thenReturn(Mono.just(fileToRename));
         when(documentRepository.existsByNameAndParentIdIsNull(any())).thenReturn(Mono.just(false));
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(fileToRename));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
 
         Mono<Document> result = documentService.renameFile(fileId, request, mockAuthentication);
 
@@ -358,19 +362,19 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         verify(documentRepository).save(any(Document.class));
-        verify(auditService).logAction(eq("testuser"), eq("RENAME_FILE"), eq("FILE"), eq(fileId), any(List.class));
+        verify(auditService).logAction(eq("testuser"), eq(RENAME_FILE), eq(FILE), eq(fileId), any(List.class));
     }
 
     @Test
     void renameFolder_success() {
         UUID folderId = UUID.randomUUID();
         RenameRequest request = new RenameRequest("new-name");
-        Document folderToRename = Document.builder().id(folderId).parentId(UUID.randomUUID()).type(DocumentType.FOLDER).name("old-name").build();
+        Document folderToRename = Document.builder().id(folderId).parentId(UUID.randomUUID()).type(FOLDER).name("old-name").build();
 
         when(documentRepository.findById(folderId)).thenReturn(Mono.just(folderToRename));
         when(documentRepository.existsByNameAndParentId(any(), any())).thenReturn(Mono.just(false));
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(folderToRename));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
 
         Mono<Document> result = documentService.renameFolder(folderId, request, mockAuthentication);
 
@@ -379,20 +383,20 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         verify(documentRepository).save(any(Document.class));
-        verify(auditService).logAction(eq("testuser"), eq("RENAME_FOLDER"), eq("FOLDER"), eq(folderId), any(List.class));
+        verify(auditService).logAction(eq("testuser"), eq(RENAME_FOLDER), eq(FOLDER), eq(folderId), any(List.class));
     }
 
     @Test
     void replaceDocumentContent_success() {
         UUID documentId = UUID.randomUUID();
         FilePart newFilePart = mock(FilePart.class);
-        Document document = Document.builder().id(documentId).type(DocumentType.FILE).storagePath("old-path").build();
+        Document document = Document.builder().id(documentId).type(FILE).storagePath("old-path").build();
 
         when(documentRepository.findById(documentId)).thenReturn(Mono.just(document));
         when(storageService.saveFile(newFilePart)).thenReturn(Mono.just("new-path"));
         when(storageService.deleteFile("old-path")).thenReturn(Mono.empty());
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(document));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
         Mockito.lenient().when(newFilePart.content()).thenReturn(Flux.empty());
         Mockito.lenient().when(newFilePart.headers()).thenReturn(new HttpHeaders());
 
@@ -404,18 +408,18 @@ class DocumentServiceImplTest {
 
         verify(documentRepository).save(any(Document.class));
         verify(storageService).deleteFile("old-path");
-        verify(auditService).logAction(eq("testuser"), eq("REPLACE_DOCUMENT_CONTENT"), eq("FILE"), eq(documentId), any(List.class));
+        verify(auditService).logAction(eq("testuser"), eq(REPLACE_DOCUMENT_CONTENT), eq(FILE), eq(documentId), any(List.class));
     }
 
     @Test
     void replaceDocumentMetadata_success() {
         UUID documentId = UUID.randomUUID();
         Map<String, Object> newMetadata = Map.of("key", "value");
-        Document document = Document.builder().id(documentId).type(DocumentType.FILE).build();
+        Document document = Document.builder().id(documentId).type(FILE).build();
 
         when(documentRepository.findById(documentId)).thenReturn(Mono.just(document));
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(document));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
         ObjectNode node = JsonNodeFactory.instance.objectNode().put("key", "value");
         when(objectMapper.valueToTree(newMetadata)).thenReturn(node);
 
@@ -426,7 +430,7 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         verify(documentRepository).save(any(Document.class));
-        verify(auditService).logAction(eq("testuser"), eq("REPLACE_DOCUMENT_METADATA"), anyString(), eq(documentId), any(List.class));
+        verify(auditService).logAction(eq("testuser"), eq(REPLACE_DOCUMENT_METADATA), any(DocumentType.class), eq(documentId), any(List.class));
     }
 
     @Test
@@ -434,11 +438,11 @@ class DocumentServiceImplTest {
         UUID documentId = UUID.randomUUID();
         Map<String, Object> map = Map.of("key", "value");
         UpdateMetadataRequest request = new UpdateMetadataRequest(map);
-        Document document = Document.builder().id(documentId).type(DocumentType.FILE).build();
+        Document document = Document.builder().id(documentId).type(FILE).build();
 
         when(documentRepository.findById(documentId)).thenReturn(Mono.just(document));
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(document));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
         when(jsonUtils.toJsonNode(any())).thenReturn(new ObjectMapper().createObjectNode());
         when(objectMapper.valueToTree(any())).thenReturn(JsonNodeFactory.instance.objectNode().textNode("value"));
 
@@ -449,18 +453,18 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         verify(documentRepository).save(any(Document.class));
-        verify(auditService).logAction(eq("testuser"), eq("UPDATE_DOCUMENT_METADATA"), anyString(), eq(documentId), any(List.class));
+        verify(auditService).logAction(eq("testuser"), eq(UPDATE_DOCUMENT_METADATA), any(DocumentType.class), eq(documentId), any(List.class));
     }
 
     @Test
     void deleteDocumentMetadata_success() {
         UUID documentId = UUID.randomUUID();
         DeleteMetadataRequest request = new DeleteMetadataRequest(List.of("key"));
-        Document document = Document.builder().id(documentId).type(DocumentType.FILE).metadata(Json.of("{\"key\":\"value\"}")).build();
+        Document document = Document.builder().id(documentId).type(FILE).metadata(Json.of("{\"key\":\"value\"}")).build();
 
         when(documentRepository.findById(documentId)).thenReturn(Mono.just(document));
         when(documentRepository.save(any(Document.class))).thenReturn(Mono.just(document));
-        when(auditService.logAction(anyString(), anyString(), anyString(), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
+        when(auditService.logAction(anyString(), any(AuditAction.class), any(DocumentType.class), any(UUID.class), any(List.class))).thenReturn(Mono.empty());
         when(jsonUtils.toMap(any())).thenReturn(new ObjectMapper().convertValue(Map.of("key", "value"), Map.class));
         when(jsonUtils.toJson(any(Map.class))).thenReturn(Json.of("{}"));
 
@@ -470,15 +474,15 @@ class DocumentServiceImplTest {
                 .verifyComplete();
 
         verify(documentRepository).save(any(Document.class));
-        verify(auditService).logAction(eq("testuser"), eq("DELETE_DOCUMENT_METADATA"), anyString(), eq(documentId), any(List.class));
+        verify(auditService).logAction(eq("testuser"), eq(DELETE_DOCUMENT_METADATA), any(DocumentType.class), eq(documentId), any(List.class));
     }
 
     @Test
     void downloadMultipleDocumentsAsZip_success() throws InterruptedException {
         UUID docId1 = UUID.randomUUID();
         UUID docId2 = UUID.randomUUID();
-        Document doc1 = Document.builder().id(docId1).type(DocumentType.FILE).name("file1.txt").storagePath("path1").build();
-        Document doc2 = Document.builder().id(docId2).type(DocumentType.FILE).name("file2.txt").storagePath("path2").build();
+        Document doc1 = Document.builder().id(docId1).type(FILE).name("file1.txt").storagePath("path1").build();
+        Document doc2 = Document.builder().id(docId2).type(FILE).name("file2.txt").storagePath("path2").build();
 
         when(documentRepository.findByIdIn(List.of(docId1, docId2))).thenReturn(Flux.just(doc1, doc2));
         Resource resource = mock(Resource.class);
@@ -529,8 +533,8 @@ class DocumentServiceImplTest {
     @Test
     void getDocumentInfo_success() {
         UUID documentId = UUID.randomUUID();
-        Document document = Document.builder().id(documentId).type(DocumentType.FILE).name("test.txt").build();
-        DocumentInfo documentInfo = new DocumentInfo(DocumentType.FILE, "test.txt", null, null, null);
+        Document document = Document.builder().id(documentId).type(FILE).name("test.txt").build();
+        DocumentInfo documentInfo = new DocumentInfo(FILE, "test.txt", null, null, null);
 
         when(documentRepository.findById(documentId)).thenReturn(Mono.just(document));
 
@@ -544,9 +548,9 @@ class DocumentServiceImplTest {
     @Test
     void listFolderInfo_success() {
         UUID folderId = UUID.randomUUID();
-        FolderElementInfo folderElementInfo = new FolderElementInfo(UUID.randomUUID(), DocumentType.FILE, "test.txt");
+        FolderElementInfo folderElementInfo = new FolderElementInfo(UUID.randomUUID(), FILE, "test.txt");
 
-        when(documentRepository.existsByIdAndType(folderId, DocumentType.FOLDER)).thenReturn(Mono.just(true));
+        when(documentRepository.existsByIdAndType(folderId, FOLDER)).thenReturn(Mono.just(true));
         when(documentRepository.listDocumentInfoInFolder(folderId)).thenReturn(Flux.just(folderElementInfo));
 
         Flux<FolderElementInfo> result = documentService.listFolderInfo(folderId, false, false, mockAuthentication);

@@ -3,11 +3,14 @@ package org.openfilz.dms.repository.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.r2dbc.postgresql.codec.Json;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.openfilz.dms.enums.AuditAction;
 import org.openfilz.dms.dto.AuditLog;
 import org.openfilz.dms.dto.SearchByAuditLogRequest;
 import org.openfilz.dms.dto.SortOrder;
+import org.openfilz.dms.enums.DocumentType;
 import org.openfilz.dms.repository.AuditDAO;
 import org.openfilz.dms.utils.JsonUtils;
 import org.springframework.r2dbc.core.DatabaseClient;
@@ -44,8 +47,8 @@ public class AuditDAOImpl implements AuditDAO {
                         null,
                         row.get("timestamp", OffsetDateTime.class),
                         row.get("user_principal", String.class),
-                        row.get("action", String.class),
-                        row.get("resource_type", String.class),
+                        AuditAction.valueOf(row.get("action", String.class)),
+                        DocumentType.valueOf(row.get("resource_type", String.class)),
                         jsonUtils.toJsonNode(row.get("details", Json.class))
                 )).all();
     }
@@ -105,14 +108,14 @@ public class AuditDAOImpl implements AuditDAO {
                         row.get("resource_id", UUID.class),
                         row.get("timestamp", OffsetDateTime.class),
                         row.get("user_principal", String.class),
-                        row.get("action", String.class),
-                        row.get("resource_type", String.class),
+                        AuditAction.valueOf(row.get("action", String.class)),
+                        DocumentType.valueOf(row.get("resource_type", String.class)),
                         jsonUtils.toJsonNode(row.get("details", Json.class))))
                 .all();
     }
 
     @Override
-    public Mono<Void> logAction(String userPrincipal, String action, String resourceType, UUID resourceId, Map<String, Object> details) {
+    public Mono<Void> logAction(String userPrincipal, AuditAction action, DocumentType resourceType, UUID resourceId, Map<String, Object> details) {
         DatabaseClient.GenericExecuteSpec executeSpec;
         StringBuilder sql = new StringBuilder(AUDIT_INSERT_SQL);
         if (details != null && !details.isEmpty()) {
@@ -129,12 +132,12 @@ public class AuditDAOImpl implements AuditDAO {
                 .onErrorResume(e -> Mono.empty());
     }
 
-    private DatabaseClient.GenericExecuteSpec bindAuditValues(String userPrincipal, String action, String resourceType, UUID resourceId, StringBuilder sql) {
+    private DatabaseClient.GenericExecuteSpec bindAuditValues(String userPrincipal, @NotNull AuditAction action, @NotNull DocumentType resourceType, UUID resourceId, StringBuilder sql) {
         return databaseClient.sql(sql.toString())
                 .bind("ts", OffsetDateTime.now())
                 .bind("up", userPrincipal != null ? userPrincipal : "SYSTEM")
-                .bind("act", action)
-                .bind("rt", resourceType)
+                .bind("act", action.toString())
+                .bind("rt", resourceType.toString())
                 .bind("rid", resourceId);
     }
 }
