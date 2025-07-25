@@ -41,6 +41,8 @@ import java.util.zip.ZipInputStream;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
+import static org.openfilz.dms.enums.AuditAction.CREATE_FOLDER;
+import static org.openfilz.dms.enums.AuditAction.DELETE_FOLDER;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -1666,8 +1668,8 @@ public class DocumentManagementLocalStorageIT {
 
         Assertions.assertNotNull(auditTrail);
         Assertions.assertEquals(2, auditTrail.size());
-        Assertions.assertEquals("DELETE_FOLDER", auditTrail.get(0).action());;
-        Assertions.assertEquals("CREATE_FOLDER", auditTrail.get(1).action());
+        Assertions.assertEquals(DELETE_FOLDER, auditTrail.get(0).action());;
+        Assertions.assertEquals(CREATE_FOLDER, auditTrail.get(1).action());
 
         auditTrail = webTestClient.get().uri(uri -> uri.path("/api/v1/audit/{id}").queryParam("sort", SortOrder.ASC.name())
                         .build(folderResponse.id()))
@@ -1678,7 +1680,7 @@ public class DocumentManagementLocalStorageIT {
 
         Assertions.assertNotNull(auditTrail);
         Assertions.assertEquals(2, auditTrail.size());
-        Assertions.assertEquals("DELETE_FOLDER", auditTrail.get(1).action());;
-        Assertions.assertEquals("CREATE_FOLDER", auditTrail.get(0).action());
+        Assertions.assertEquals(DELETE_FOLDER, auditTrail.get(1).action());;
+        Assertions.assertEquals(CREATE_FOLDER, auditTrail.get(0).action());
     }
 }
