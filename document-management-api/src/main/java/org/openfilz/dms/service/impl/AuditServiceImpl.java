@@ -3,9 +3,10 @@ package org.openfilz.dms.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.openfilz.dms.dto.AuditLog;
-import org.openfilz.dms.dto.SearchByAuditLogRequest;
-import org.openfilz.dms.dto.SortOrder;
+import org.openfilz.dms.dto.audit.AuditLog;
+import org.openfilz.dms.dto.audit.AuditLogDetails;
+import org.openfilz.dms.dto.request.SearchByAuditLogRequest;
+import org.openfilz.dms.enums.SortOrder;
 import org.openfilz.dms.enums.AuditAction;
 import org.openfilz.dms.enums.DocumentType;
 import org.openfilz.dms.exception.AuditException;
@@ -30,14 +31,7 @@ public class AuditServiceImpl implements AuditService {
     private final AuditDAO auditDAO;
 
     @Override
-    public Mono<Void> logAction(String userPrincipal, AuditAction action, DocumentType resourceType, UUID resourceId, List<MapEntry> details) {
-
-        return auditDAO.logAction(userPrincipal, action, resourceType, resourceId, toMap(details.stream()));
-    }
-
-    @Override
-    public Mono<Void> logAction(String userPrincipal, AuditAction action, DocumentType resourceType, UUID resourceId, Record record) {
-        Map<String, Object> details = recordToMap(record);
+    public Mono<Void> logAction(String userPrincipal, AuditAction action, DocumentType resourceType, UUID resourceId, AuditLogDetails details) {
         return auditDAO.logAction(userPrincipal, action, resourceType, resourceId, details);
     }
 

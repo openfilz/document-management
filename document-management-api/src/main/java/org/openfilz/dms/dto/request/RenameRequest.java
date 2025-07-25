@@ -1,4 +1,4 @@
-package org.openfilz.dms.dto;
+package org.openfilz.dms.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

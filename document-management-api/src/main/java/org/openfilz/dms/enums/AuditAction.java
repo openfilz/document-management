@@ -1,6 +1,7 @@
 package org.openfilz.dms.enums;
 
 public enum AuditAction {
+
     COPY_FILE,
     COPY_FILE_CHILD,
     RENAME_FILE,
@@ -16,5 +17,7 @@ public enum AuditAction {
     REPLACE_DOCUMENT_CONTENT,
     REPLACE_DOCUMENT_METADATA,
     UPDATE_DOCUMENT_METADATA,
-    DOWNLOAD_DOCUMENT, DELETE_DOCUMENT_METADATA
+    DOWNLOAD_DOCUMENT,
+    DELETE_DOCUMENT_METADATA
+
 }

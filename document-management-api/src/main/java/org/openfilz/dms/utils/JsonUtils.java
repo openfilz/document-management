@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.r2dbc.postgresql.codec.Json;
 import lombok.RequiredArgsConstructor;
+import org.openfilz.dms.dto.audit.AuditLogDetails;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -56,6 +57,25 @@ public class JsonUtils {
     public Map<String, Object> toMap(Json json) {
         try {
             return objectMapper.convertValue(objectMapper.readTree(json.asString()), Map.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public AuditLogDetails toAudiLogDetails(Json json) {
+        if(json ==null) {
+            return null;
+        }
+        try {
+            return objectMapper.convertValue(objectMapper.readTree(json.asString()), AuditLogDetails.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Json toJson(AuditLogDetails details) {
+        try {
+            return Json.of(objectMapper.writeValueAsString(details));
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
