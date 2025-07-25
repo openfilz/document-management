@@ -77,7 +77,7 @@ jobs:
         run: mvn -B release:prepare -DtagNameFormat=v@{project.version} -Darguments="-DskipTests"
 
       - name: Perform Release
-        run: mvn -B release:perform -Darguments="-Pkube,mavenPublish -Dregistry.hostname=ghcr.io -Dregistry.port=443 -Ddocker.context.path=openfilz/ -Djib.to.auth.username=${{ github.actor }} -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}"
+        run: mvn -B release:perform -Darguments="-Pkube,publishMaven -Dregistry.hostname=ghcr.io -Dregistry.port=443 -Ddocker.context.path=openfilz/ -Djib.to.auth.username=${{ github.actor }} -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }}"
 
       - name: Generate Changelog
         run: mvn git-changelog-maven-plugin:git-changelog
