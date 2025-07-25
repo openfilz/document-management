@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.openfilz.dms.dto.AuditLog;
 import org.openfilz.dms.dto.SearchByAuditLogRequest;
 import org.openfilz.dms.dto.SortOrder;
+import org.openfilz.dms.enums.AuditAction;
+import org.openfilz.dms.enums.DocumentType;
 import org.openfilz.dms.exception.AuditException;
 import org.openfilz.dms.repository.AuditDAO;
 import org.openfilz.dms.service.AuditService;
@@ -28,19 +30,19 @@ public class AuditServiceImpl implements AuditService {
     private final AuditDAO auditDAO;
 
     @Override
-    public Mono<Void> logAction(String userPrincipal, String action, String resourceType, UUID resourceId, List<MapEntry> details) {
+    public Mono<Void> logAction(String userPrincipal, AuditAction action, DocumentType resourceType, UUID resourceId, List<MapEntry> details) {
 
         return auditDAO.logAction(userPrincipal, action, resourceType, resourceId, toMap(details.stream()));
     }
 
     @Override
-    public Mono<Void> logAction(String userPrincipal, String action, String resourceType, UUID resourceId, Record record) {
+    public Mono<Void> logAction(String userPrincipal, AuditAction action, DocumentType resourceType, UUID resourceId, Record record) {
         Map<String, Object> details = recordToMap(record);
         return auditDAO.logAction(userPrincipal, action, resourceType, resourceId, details);
     }
 
     @Override
-    public Mono<Void> logAction(String userPrincipal, String action, String resourceType, UUID resourceId) {
+    public Mono<Void> logAction(String userPrincipal, AuditAction action, DocumentType resourceType, UUID resourceId) {
         return auditDAO.logAction(userPrincipal, action, resourceType, resourceId, null);
     }
 
