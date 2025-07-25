@@ -3,6 +3,8 @@ package org.openfilz.dms.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.openfilz.dms.enums.AuditAction;
+import org.openfilz.dms.enums.DocumentType;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -12,7 +14,7 @@ public record AuditLog(
         UUID id,
         OffsetDateTime timestamp,
         String username,
-        String action,
-        String resourceType,
+        AuditAction action,
+        DocumentType resourceType,
         JsonNode details) {
 }
