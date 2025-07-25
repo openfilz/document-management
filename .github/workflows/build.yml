@@ -41,7 +41,7 @@ jobs:
           passphrase: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
 
       - name: Build with Maven
-        run: mvn -B clean deploy --file pom.xml
+        run: mvn -B clean deploy -Pkube,mavenPublish -Dregistry.hostname=ghcr.io -Dregistry.port=443 -Ddocker.context.path=openfilz/ -Djib.to.auth.username=${{ github.actor }} -Djib.to.auth.password=${{ secrets.GITHUB_TOKEN }} --file pom.xml
 
       - name: Generate JaCoCo Badge
         id: jacoco-badge
