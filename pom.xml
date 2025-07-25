@@ -227,6 +227,13 @@
                             </execution>
                         </executions>
                     </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>changeLog</id>
+            <build>
+                <plugins>
                     <plugin>
                         <groupId>se.bjurr.gitchangelog</groupId>
                         <artifactId>git-changelog-maven-plugin</artifactId>
