@@ -4,18 +4,22 @@ package org.openfilz.dms.dto.audit;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import java.util.Map;
 
-@JsonTypeName("updateMetadata")
+@JsonTypeName(AuditLogDetails.UPDATE_METADATA)
 @Getter
-@RequiredArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Schema(description = AuditLogDetails.DISCRIMINATOR + "=" + AuditLogDetails.UPDATE_METADATA)
 public class UpdateMetadataAudit extends AuditLogDetails {
 
     @Schema(description = "Updated Metadata")
-    private final Map<String, Object> updatedMetadata;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private Map<String, Object> updatedMetadata;
 
 }

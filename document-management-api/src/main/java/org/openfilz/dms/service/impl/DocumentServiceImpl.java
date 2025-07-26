@@ -443,43 +443,6 @@ public class DocumentServiceImpl implements DocumentService {
             }
             return Mono.just(originalName);
         });
-
-        // This is a simplified loop for demonstration. A fully reactive loop is more complex.
-        // For a true reactive approach, you'd use expand or a similar operator.
-        // This blocking approach is NOT ideal in a reactive service.
-       /* while (existsCheck.blockOptional().orElse(false)) { // DANGER: BLOCKING
-            currentName = baseName + " (" + count++ + ")" + (extension != null && !extension.isEmpty() ? "." + extension : "");
-            existsCheck = (parentId == null)
-                ? documentRepository.existsByNameAndParentIdIsNull(currentName)
-                : documentRepository.existsByNameAndParentId(currentName, parentId);
-        }
-        return Mono.just(currentName);*/
-
-        // Proper reactive way (conceptual):
-        /*
-        return Flux.defer(() -> {
-            final int[] copyCount = {0}; // Effectively final for lambda
-            final String[] nameToTest = {originalName};
-
-            return Mono.defer(() -> parentId == null ?
-                    documentRepository.existsByNameAndParentIdIsNull(nameToTest[0]) :
-                    documentRepository.existsByNameAndParentId(nameToTest[0], parentId)
-                )
-                .expand(exists -> {
-                    if (!exists) {
-                        return Mono.empty(); // Found a unique name
-                    }
-                    copyCount[0]++;
-                    nameToTest[0] = baseName + " (" + copyCount[0] + ")" + (StringUtils.hasText(extension) ? "." + extension : "");
-                    return parentId == null ?
-                           documentRepository.existsByNameAndParentIdIsNull(nameToTest[0]) :
-                           documentRepository.existsByNameAndParentId(nameToTest[0], parentId);
-                })
-                .filter(exists -> !exists) // Take the first non-existent check (which means name is unique)
-                .next() // Should emit one item (the last 'false' from exists check)
-                .thenReturn(nameToTest[0]); // Return the unique name
-        });
-        */
     }
 
 
@@ -577,9 +540,6 @@ public class DocumentServiceImpl implements DocumentService {
             fileToRename.setName(request.newName());
             fileToRename.setUpdatedAt(OffsetDateTime.now());
             fileToRename.setUpdatedBy(username);
-            // Note: Physical file name on storage is NOT changed here for simplicity.
-            // If physical rename is needed, storageService.renameFile(oldPath, newPath) would be called.
-            // And document.storagePath would need an update if it includes the name.
             return documentRepository.save(fileToRename);
         });
     }

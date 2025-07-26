@@ -4,15 +4,18 @@ package org.openfilz.dms.dto.audit;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 
 import java.util.Map;
 
-@JsonTypeName("replace")
+@JsonTypeName(AuditLogDetails.REPLACE)
 @Getter
-@RequiredArgsConstructor
+@NoArgsConstructor
+@AllArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Schema(description = AuditLogDetails.DISCRIMINATOR + "=" + AuditLogDetails.REPLACE)
 public class ReplaceAudit extends AuditLogDetails {
 
     public ReplaceAudit(String filename) {
@@ -24,9 +27,10 @@ public class ReplaceAudit extends AuditLogDetails {
     }
 
     @Schema(description = "New file replacing the existing one")
-    private final String filename;
+    private String filename;
 
     @Schema(description = "New metadata replacing the existing ones")
-    private final Map<String, Object> metadata;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private Map<String, Object> metadata;
 
 }
