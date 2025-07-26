@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.openfilz.dms.dto.SearchByMetadataRequest;
+import org.openfilz.dms.dto.request.SearchByMetadataRequest;
 import org.openfilz.dms.repository.DocumentDAO;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Service;

@@ -1,7 +1,7 @@
 // com/example/dms/repository/DocumentRepository.java
 package org.openfilz.dms.repository;
 
-import org.openfilz.dms.dto.FolderElementInfo;
+import org.openfilz.dms.dto.response.FolderElementInfo;
 import org.openfilz.dms.entity.Document;
 import org.openfilz.dms.enums.DocumentType;
 import org.springframework.data.r2dbc.repository.Query;

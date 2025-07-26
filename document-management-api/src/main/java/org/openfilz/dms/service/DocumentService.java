@@ -1,7 +1,8 @@
 // com/example/dms/service/DocumentService.java
 package org.openfilz.dms.service;
 
-import org.openfilz.dms.dto.*;
+import org.openfilz.dms.dto.request.*;
+import org.openfilz.dms.dto.response.*;
 import org.openfilz.dms.entity.Document;
 import org.springframework.core.io.Resource;
 import org.springframework.http.codec.multipart.FilePart;

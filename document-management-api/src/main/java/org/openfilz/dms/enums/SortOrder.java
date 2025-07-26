@@ -1,4 +1,4 @@
-package org.openfilz.dms.dto;
+package org.openfilz.dms.enums;
 
 public enum SortOrder {
     ASC, DESC

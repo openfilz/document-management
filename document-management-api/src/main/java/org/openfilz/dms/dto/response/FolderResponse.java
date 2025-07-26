@@ -1,4 +1,4 @@
-package org.openfilz.dms.dto;
+package org.openfilz.dms.dto.response;
 
 import java.util.UUID;
 
