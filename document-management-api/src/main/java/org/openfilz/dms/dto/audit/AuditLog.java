@@ -1,8 +1,7 @@
 
-package org.openfilz.dms.dto;
+package org.openfilz.dms.dto.audit;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.JsonNode;
 import org.openfilz.dms.enums.AuditAction;
 import org.openfilz.dms.enums.DocumentType;
 
@@ -16,5 +15,5 @@ public record AuditLog(
         String username,
         AuditAction action,
         DocumentType resourceType,
-        JsonNode details) {
+        AuditLogDetails details) {
 }

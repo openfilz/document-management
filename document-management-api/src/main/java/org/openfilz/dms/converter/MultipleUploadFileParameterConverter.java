@@ -3,7 +3,7 @@ package org.openfilz.dms.converter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.openfilz.dms.dto.MultipleUploadFileParameter;
+import org.openfilz.dms.dto.request.MultipleUploadFileParameter;
 import org.springframework.boot.context.properties.ConfigurationPropertiesBinding;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.convert.converter.Converter;

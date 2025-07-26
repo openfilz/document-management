@@ -6,11 +6,12 @@ import io.r2dbc.postgresql.codec.Json;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.openfilz.dms.dto.audit.AuditLog;
+import org.openfilz.dms.dto.audit.AuditLogDetails;
+import org.openfilz.dms.dto.request.SearchByAuditLogRequest;
 import org.openfilz.dms.enums.AuditAction;
-import org.openfilz.dms.dto.AuditLog;
-import org.openfilz.dms.dto.SearchByAuditLogRequest;
-import org.openfilz.dms.dto.SortOrder;
 import org.openfilz.dms.enums.DocumentType;
+import org.openfilz.dms.enums.SortOrder;
 import org.openfilz.dms.repository.AuditDAO;
 import org.openfilz.dms.utils.JsonUtils;
 import org.springframework.r2dbc.core.DatabaseClient;
@@ -19,7 +20,6 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.OffsetDateTime;
-import java.util.Map;
 import java.util.UUID;
 
 import static org.openfilz.dms.utils.SqlUtils.isFirst;
@@ -49,7 +49,7 @@ public class AuditDAOImpl implements AuditDAO {
                         row.get("user_principal", String.class),
                         AuditAction.valueOf(row.get("action", String.class)),
                         DocumentType.valueOf(row.get("resource_type", String.class)),
-                        jsonUtils.toJsonNode(row.get("details", Json.class))
+                        jsonUtils.toAudiLogDetails(row.get("details", Json.class))
                 )).all();
     }
 
@@ -110,15 +110,15 @@ public class AuditDAOImpl implements AuditDAO {
                         row.get("user_principal", String.class),
                         AuditAction.valueOf(row.get("action", String.class)),
                         DocumentType.valueOf(row.get("resource_type", String.class)),
-                        jsonUtils.toJsonNode(row.get("details", Json.class))))
+                        jsonUtils.toAudiLogDetails(row.get("details", Json.class))))
                 .all();
     }
 
     @Override
-    public Mono<Void> logAction(String userPrincipal, AuditAction action, DocumentType resourceType, UUID resourceId, Map<String, Object> details) {
+    public Mono<Void> logAction(String userPrincipal, AuditAction action, DocumentType resourceType, UUID resourceId, AuditLogDetails details) {
         DatabaseClient.GenericExecuteSpec executeSpec;
         StringBuilder sql = new StringBuilder(AUDIT_INSERT_SQL);
-        if (details != null && !details.isEmpty()) {
+        if (details != null) {
             sql.append(", details ").append(AUDIT_VALUES_SQL).append(", :det)");
             Json detailsJson = jsonUtils.toJson(details);
             executeSpec = bindAuditValues(userPrincipal, action, resourceType, resourceId, sql).bind("det", detailsJson);
