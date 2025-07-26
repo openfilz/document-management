@@ -47,8 +47,7 @@ import java.util.zip.ZipInputStream;
 
 import static java.nio.file.StandardOpenOption.CREATE;
 import static java.nio.file.StandardOpenOption.WRITE;
-import static org.openfilz.dms.enums.AuditAction.CREATE_FOLDER;
-import static org.openfilz.dms.enums.AuditAction.DELETE_FOLDER;
+import static org.openfilz.dms.enums.AuditAction.*;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -1616,7 +1615,7 @@ public class DocumentManagementLocalStorageIT {
         Assertions.assertTrue(!auditTrail.isEmpty());
 
         auditTrail = webTestClient.post().uri("/api/v1/audit/search")
-                .body(BodyInserters.fromValue(new SearchByAuditLogRequest(null, uploadResponse.id(), null, "UPLOAD_DOCUMENT", null)))
+                .body(BodyInserters.fromValue(new SearchByAuditLogRequest(null, uploadResponse.id(), null, UPLOAD_DOCUMENT, null)))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBodyList(AuditLog.class)

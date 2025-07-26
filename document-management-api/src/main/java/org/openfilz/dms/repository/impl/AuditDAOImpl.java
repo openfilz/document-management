@@ -62,7 +62,7 @@ public class AuditDAOImpl implements AuditDAO {
             first = isFirst(first, sql);
             sql.append("resource_id = :id ");
         }
-        boolean actionCriteria = request.action() != null && !request.action().isEmpty();
+        boolean actionCriteria = request.action() != null;
         if(actionCriteria) {
             first = isFirst(first, sql);
             sql.append("action = :action ");
@@ -87,7 +87,7 @@ public class AuditDAOImpl implements AuditDAO {
             query = query.bind("id", request.id());
         }
         if(actionCriteria) {
-            query = query.bind("action", request.action());
+            query = query.bind("action", request.action().toString());
         }
         if(typeCriteria) {
             query = query.bind("type", request.type().toString());
