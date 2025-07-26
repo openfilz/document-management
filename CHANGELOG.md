@@ -4,21 +4,21 @@
 **[maven-release-plugin] prepare for next development iteration**
 
 
-[dfead539965522b](https://github.com/openfilz/document-management/commit/dfead539965522b) maven-release-bot[bot] *2025-07-26 15:53:55*
+[894230bec5074bf](https://github.com/openfilz/document-management/commit/894230bec5074bf) maven-release-bot[bot] *2025-07-26 16:04:22*
 
 
-## v1.0.35
+## v1.0.36
 ### No issue
 
-**[maven-release-plugin] prepare release v1.0.35**
+**[maven-release-plugin] prepare release v1.0.36**
 
 
-[5a124c2140c6e18](https://github.com/openfilz/document-management/commit/5a124c2140c6e18) maven-release-bot[bot] *2025-07-26 15:53:53*
+[2779834e8944c6e](https://github.com/openfilz/document-management/commit/2779834e8944c6e) maven-release-bot[bot] *2025-07-26 16:04:21*
 
-**Merge pull request #63**
+**Merge pull request #64**
 
- * feat/audit-structured
+ * develop
 
-[c537e0d629dc0cc](https://github.com/openfilz/document-management/commit/c537e0d629dc0cc) Yann Demel *2025-07-26 15:53:08*
+[205aeeb6b19cad6](https://github.com/openfilz/document-management/commit/205aeeb6b19cad6) Yann Demel *2025-07-26 16:03:39*
 
 
