@@ -4,21 +4,21 @@
 **[maven-release-plugin] prepare for next development iteration**
 
 
-[894230bec5074bf](https://github.com/openfilz/document-management/commit/894230bec5074bf) maven-release-bot[bot] *2025-07-26 16:04:22*
+[41750cc5f7286a8](https://github.com/openfilz/document-management/commit/41750cc5f7286a8) maven-release-bot[bot] *2025-07-26 16:18:28*
 
 
-## v1.0.36
+## v1.0.37
 ### No issue
 
-**[maven-release-plugin] prepare release v1.0.36**
+**[maven-release-plugin] prepare release v1.0.37**
 
 
-[2779834e8944c6e](https://github.com/openfilz/document-management/commit/2779834e8944c6e) maven-release-bot[bot] *2025-07-26 16:04:21*
+[40753d5c981dab6](https://github.com/openfilz/document-management/commit/40753d5c981dab6) maven-release-bot[bot] *2025-07-26 16:18:26*
 
-**Merge pull request #64**
+**Merge pull request #65**
 
  * develop
 
-[205aeeb6b19cad6](https://github.com/openfilz/document-management/commit/205aeeb6b19cad6) Yann Demel *2025-07-26 16:03:39*
+[df4a5738c513957](https://github.com/openfilz/document-management/commit/df4a5738c513957) Yann Demel *2025-07-26 16:17:39*
 
 
