@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.openfilz.dms.config.ApiVersion;
 import org.openfilz.dms.dto.request.*;
 import org.openfilz.dms.dto.response.DocumentBrief;
 import org.openfilz.dms.dto.response.FolderElementInfo;
@@ -21,7 +22,7 @@ import reactor.core.publisher.Mono;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/folders")
+@RequestMapping(ApiVersion.API_PREFIX + "/folders")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "keycloak_auth") // For Swagger UI
 public class FolderController {
