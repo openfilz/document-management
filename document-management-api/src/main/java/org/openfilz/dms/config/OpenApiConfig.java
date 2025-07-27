@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Collections;
 import java.util.List;
 
 @Configuration
@@ -37,11 +38,12 @@ public class OpenApiConfig {
                         .version(serviceVersion)
                         .description("API for Document Management System")
                         .license(new License().name("Apache 2.0").url("https://openfilz.org")))
-                .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
+                .addSecurityItem(new SecurityRequirement().addList(securitySchemeName, Collections.emptyList()))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName, new SecurityScheme()
                                 .name(securitySchemeName)
-                                .type(SecurityScheme.Type.OPENIDCONNECT)
+                                .type(SecurityScheme.Type.HTTP)
+                                .in(SecurityScheme.In.HEADER)
                                 .openIdConnectUrl(openIdConnectUrl) // Keycloak's OIDC discovery endpoint
                                 .scheme("bearer")
                                 .bearerFormat("JWT")

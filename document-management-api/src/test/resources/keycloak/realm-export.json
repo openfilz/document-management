@@ -1,0 +1,119 @@
+{
+  "realm": "your-realm",
+  "enabled": true,
+  "clients": [
+    {
+      "clientId": "test-client",
+      "secret": "test-client-secret",
+      "enabled": true,
+      "publicClient": false,
+      "directAccessGrantsEnabled": true,
+      "serviceAccountsEnabled": false,
+      "standardFlowEnabled": true,
+      "rootUrl": "http://localhost:8080"
+    }
+  ],
+  "users": [
+    {
+      "username": "audit-user",
+      "firstName": "audit-user first name",
+      "lastName": "audit-user last name",
+      "email": "audit-user@test.com",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ],
+      "realmRoles": [
+        "AUDITOR"
+      ]
+    },
+    {
+      "username": "reader-user",
+      "firstName": "reader-user first name",
+      "lastName": "reader-user last name",
+      "email": "reader-user@test.com",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ],
+      "realmRoles": [
+        "READER"
+      ]
+    },
+    {
+      "username": "contributor-user",
+      "firstName": "contributor-user first name",
+      "lastName": "contributor-user last name",
+      "email": "contributor-user@test.com",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ],
+      "realmRoles": [
+        "CONTRIBUTOR"
+      ]
+    },
+    {
+      "username": "admin-user",
+      "firstName": "admin-user first name",
+      "lastName": "admin-user last name",
+      "email": "admin-user@test.com",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ],
+      "realmRoles": [
+        "CONTRIBUTOR", "AUDITOR"
+      ]
+    },
+    {
+      "username": "test-user",
+      "firstName": "test-user first name",
+      "lastName": "test-user last name",
+      "email": "test-user@test.com",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ],
+      "realmRoles": [
+
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "AUDITOR",
+        "description": "AUDITOR role"
+      },
+      {
+        "name": "CONTRIBUTOR",
+        "description": "CONTRIBUTOR role"
+      },
+      {
+        "name": "READER",
+        "description": "READER role"
+      }
+    ]
+  }
+}

@@ -5,7 +5,7 @@ This document outlines the major milestones we have in mind for improving the Do
 ## M1
 
 *   **Automated Integration Tests with Testcontainers**: Implement a comprehensive suite of automated integration tests using Testcontainers. This will involve setting up a testing environment with Docker containers for PostgreSQL, MinIO, and Keycloak to ensure the application is tested in an environment that closely resembles production.
-*   **Audit**
+*   **Audit**: Implement custom audit trail per action, and let the users search for audi logs via API 
 *   **Customizable Security**
 
 ## M2
