@@ -1,6 +1,5 @@
 package org.openfilz.dms.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
@@ -63,45 +62,23 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenUploadDocument_thenCreated() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
 
-        webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload")
-                        .queryParam("allowDuplicateFileNames", true)
-                        .build())
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData(builder.build()))
-                .exchange()
-                .expectStatus().isCreated()
+        getUploadDocumentExchange(builder).expectStatus().isCreated()
                 .expectBody()
                 .jsonPath("$.name").isEqualTo("schema.sql");
     }
 
     @Test
     void whenUploadMultipleDocuments_thenCreated() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
-        builder.part("file", new ClassPathResource("test.txt"));
+        MultipartBodyBuilder builder = newFileBuilder("schema.sql", "test.txt");
 
         Map<String, Object> metadata1 = Map.of("helmVersion", "1.0");
         MultipleUploadFileParameter param1 = new MultipleUploadFileParameter("schema.sql", new MultipleUploadFileParameterAttributes(null, metadata1));
         Map<String, Object> metadata2 = Map.of("owner", "OpenFilz");
         MultipleUploadFileParameter param2 = new MultipleUploadFileParameter("test.txt", new MultipleUploadFileParameterAttributes(null, metadata2));
 
-        List<UploadResponse> uploadResponse = webTestClient.post().uri(uri -> {
-                    try {
-                        return uri.path(ApiVersion.API_PREFIX + "/documents/upload-multiple")
-                                        .queryParam("allowDuplicateFileNames", true)
-                                        .queryParam("parametersByFilename[]", "{parametersByFilename}", "{parametersByFilename}")
-                                        .build(objectMapper.writeValueAsString(param1),
-                                                objectMapper.writeValueAsString(param2));
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData(builder.build()))
-                .exchange()
+        List<UploadResponse> uploadResponse = getUploadMultipleDocumentExchange(param1, param2, builder)
                 .expectStatus().isOk()
                 .expectBody(new ParameterizedTypeReference<List<UploadResponse>>() {})
                 .returnResult().getResponseBody();
@@ -115,6 +92,8 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         checkFileInfo(uploadResponse2, param2, metadata2);
 
     }
+
+
 
     private void checkFileInfo(UploadResponse uploadResponse, MultipleUploadFileParameter param, Map<String, Object> metadata) {
         DocumentInfo info2 = webTestClient.get().uri(uri ->
@@ -131,8 +110,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenUploadTwiceSameDocument_thenConflict() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
 
         webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload")
                         .queryParam("allowDuplicateFileNames", true)
@@ -153,8 +131,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenSearchMetadata_thenOK() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
         builder.part("metadata", Map.of("owner", "OpenFilz", "appId", "MY_APP_1"));
 
         UploadResponse uploadResponse = uploadDocument(builder);
@@ -190,8 +167,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenSearchIdsByMetadata_thenOK() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
         UUID uuid = UUID.randomUUID();
         builder.part("metadata", Map.of("owner", "OpenFilz", "appId", uuid.toString()));
 
@@ -376,8 +352,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenSearchMetadata_thenNotFound() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
         builder.part("metadata", Map.of("owner", "OpenFilz", "appId", "MY_APP_1"));
 
         UploadResponse uploadResponse = uploadDocument(builder);
@@ -424,8 +399,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenReplaceContent_thenOK() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
 
         UploadResponse originalUploadResponse = uploadDocument(builder);
 
@@ -460,8 +434,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenLoadFileInCorruptedDatabase_thenError() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
 
         UploadResponse originalUploadResponse = uploadDocument(builder);
 
@@ -477,8 +450,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenDeleteFileInCorruptedDatabase_thenError() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
 
         UploadResponse response = uploadDocument(builder);
 
@@ -497,8 +469,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenCopyFileInCorruptedDatabase_thenErrorInCorruptedDatabase_thenError() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
 
         UploadResponse response = uploadDocument(builder);
 
@@ -534,8 +505,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenReplaceMetadata_thenOK() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
         builder.part("metadata", Map.of("owner", "OpenFilz", "appId", "MY_APP_1"));
 
         UploadResponse originalUploadResponse = uploadDocument(builder);
@@ -569,8 +539,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenDownloadDocument_thenOk() throws IOException {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
 
         UploadResponse response = uploadDocument(builder);
 
@@ -704,8 +673,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenDeleteDocument_thenNoContent() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
 
         UploadResponse response = uploadDocument(builder);
 
@@ -723,8 +691,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenDeleteMetadata_thenOk() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
         builder.part("metadata", Map.of("owner", "OpenFilz", "appId", "MY_APP_1"));
 
         UploadResponse uploadResponse = uploadDocument(builder);
@@ -753,8 +720,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenUpdateMetadata_thenOk() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
         builder.part("metadata", Map.of("owner", "OpenFilz", "appId", "MY_APP_1"));
 
         UploadResponse uploadResponse = uploadDocument(builder);
@@ -806,8 +772,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenMoveFile_thenOk() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
 
         UploadResponse response = uploadDocument(builder);
 
@@ -885,8 +850,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .exchange()
                 .expectStatus().is4xxClientError();
 
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
 
         UploadResponse file = uploadDocument(builder);
 
@@ -925,16 +889,9 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenCopyFile_thenOk() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
 
-        UploadResponse response = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/upload")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(BodyInserters.fromMultipartData(builder.build()))
-                .exchange()
-                .expectStatus().isCreated()
-                .expectBody(UploadResponse.class)
-                .returnResult().getResponseBody();
+        UploadResponse response = getUploadResponse(builder);
 
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-b", null);
 
@@ -981,8 +938,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenRenameFile_thenOk() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
 
         UploadResponse response = uploadDocument(builder);
 
@@ -1006,13 +962,14 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
 
     @Test
-    void whenDeleteFile_thenOk() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+    void whenDeleteFiles_thenOk() {
+        MultipartBodyBuilder builder = newFileBuilder();
 
         UploadResponse response = uploadDocument(builder);
 
-        DeleteRequest deleteRequest = new DeleteRequest(Collections.singletonList(response.id()));
+        UploadResponse response2 = uploadDocument(newFileBuilder());
+
+        DeleteRequest deleteRequest = new DeleteRequest(List.of(response.id(), response2.id()));
 
         webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri(ApiVersion.API_PREFIX + "/files")
                 .body(BodyInserters.fromValue(deleteRequest))
@@ -1020,6 +977,10 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .expectStatus().isNoContent();
 
         webTestClient.get().uri(ApiVersion.API_PREFIX + "/documents/{id}/info", response.id())
+                .exchange()
+                .expectStatus().isNotFound();
+
+        webTestClient.get().uri(ApiVersion.API_PREFIX + "/documents/{id}/info", response2.id())
                 .exchange()
                 .expectStatus().isNotFound();
     }
@@ -1146,8 +1107,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .expectBody(FolderResponse.class)
                 .returnResult().getResponseBody();
 
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
         builder.part("parentFolderId", sourceFolderResponse.id().toString());
 
         UploadResponse sourceRootFile = webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload")
@@ -1244,8 +1204,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .expectBody(FolderResponse.class)
                 .returnResult().getResponseBody();
 
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
         builder.part("parentFolderId", sourceFolderResponse.id().toString());
 
         UploadResponse sourceRootFile = webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload")
@@ -1410,8 +1369,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenSearchAuditTrail_thenOK() {
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", new ClassPathResource("schema.sql"));
+        MultipartBodyBuilder builder = newFileBuilder();
         String appId = UUID.randomUUID().toString();
         builder.part("metadata", Map.of("owner", "OpenFilz", "appId", appId));
 

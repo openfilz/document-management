@@ -36,6 +36,39 @@ As a dedicated microservice, the API is built to be highly available and scalabl
 #### 6. **Promote a Decoupled Architecture**
 Frontend applications, backend microservices, and data processing pipelines can all interact with documents through the API without needing to know about the physical storage location or implementation details. This promotes a clean, decoupled architecture that is easier to maintain and evolve over time.
 
-Of course! Here is a Markdown file designed to showcase the powerful and modern features of your Document Management API.
+## Security
 
-***
+The Document Management API provides flexible security options.
+
+### Disabling Security
+
+For development or testing purposes, security can be completely disabled by setting the `spring.security.no-auth` property to `true` in your `application.yml`.
+
+```yaml
+spring:
+  security:
+    no-auth: true
+```
+
+### Enabled Security (OIDC Resource Server)
+
+When security is enabled, the API acts as an OIDC resource server, validating JWT tokens for every request.
+
+#### Default Authorization
+
+The default authorization model uses roles extracted from the JWT token. You can configure how roles are looked up using the `spring.security.role-token-lookup` property.
+
+#### Custom Authorization
+
+For more advanced scenarios, you can provide a completely custom authorization model. To do this, you need to:
+
+1.  Create a class that implements the `org.openfilz.dms.service.SecurityService` interface.
+2.  Specify the fully qualified name of your custom class using the `spring.security.auth-class` property.
+
+```yaml
+spring:
+  security:
+    auth-class: com.yourcompany.YourCustomSecurityService
+```
+
+This allows you to implement complex authorization logic tailored to your specific needs.

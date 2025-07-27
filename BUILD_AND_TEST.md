@@ -7,7 +7,8 @@ This document provides instructions on how to build, configure, and test the app
 
 *   **Java 24**
 *   **Maven 3.x**
-*   For running PostgreSQL, MinIO, and Keycloak : **Docker** and   **Docker Compose** or use local installations if you don't have Docker  
+*   For running MinIO locally: **Docker** and **Docker Compose** (optional, if not using local MinIO installation)
+*   For running integration tests with Keycloak and PostgreSQL: **Docker** (Testcontainers will manage the containers)  
 
 ## Building the Application
 
@@ -36,22 +37,17 @@ This command will build the `document-management-api` module and create a Docker
 
 ## Local Testing
 
-For local testing, you will need to run PostgreSQL, MinIO, and Keycloak.
-You can use Docker for that : a `docker-compose.yml` file is provided in the `helm/kube-deploy` directory for this purpose.
+For local testing, you will need to run MinIO if you are using it for storage. PostgreSQL and Keycloak are automatically managed by Testcontainers during integration tests.
 
-### 1. Start Dependent Services
+### 1. Start Dependent Services (MinIO only, if applicable)
 
-Navigate to the `helm/kube-deploy` directory and run the following command:
+If you are using MinIO for storage, navigate to the `helm/kube-deploy` directory and run the following command:
 
 ```bash
-docker-compose up -d
+docker-compose up -d minio
 ```
 
-This will start the following services:
-
-*   **PostgreSQL**: A PostgreSQL database instance.
-*   **MinIO**: An S3-compatible object storage service.
-*   **Keycloak**: An open-source identity and access management solution.
+This will start the MinIO service.
 
 ### 2. Configure the Application
 
@@ -61,9 +57,9 @@ The application is configured via `application.yml` files located in the `src/ma
 
 The `document-management-api` module requires the following configuration:
 
-*   **Database Connection**: The database connection details are configured in `application.yml`. By default, it connects to a PostgreSQL database on `localhost:5432`.
+*   **Database Connection**: The database connection details are configured in `application.yml`. For local development, you can configure it to connect to a local PostgreSQL instance or rely on Testcontainers for integration tests.
 *   **Storage**: The storage can be configured to use either the local filesystem or MinIO. For local testing, you can use the local filesystem by setting `storage.type` to `local`.
-*   **Keycloak** (optional): You can enable or disable the authentication by setting the value `(true|false)` to the parameter `spring.security.no-auth` (in `application.yml`). The Keycloak integration is configured in `application.yml`. You will need to provide the Keycloak server URL and realm.
+*   **Keycloak** (optional): You can enable or disable the authentication by setting the value `(true|false)` to the parameter `spring.security.no-auth` (in `application.yml`). The Keycloak integration is configured in `application.yml`. For integration tests, Keycloak is managed by Testcontainers and configured via `realm-export.json` in `src/test/resources/keycloak`.
 
 #### `document-management-gateway` (Optional)
 
@@ -101,3 +97,5 @@ To run the unit and integration tests, run the following command from the root d
 ```bash
 mvn test
 ```
+
+Integration tests will automatically start PostgreSQL and Keycloak using Testcontainers.
