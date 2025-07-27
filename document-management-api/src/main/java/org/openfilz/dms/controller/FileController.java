@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.openfilz.dms.config.ApiVersion;
 import org.openfilz.dms.dto.request.CopyRequest;
 import org.openfilz.dms.dto.request.DeleteRequest;
 import org.openfilz.dms.dto.request.MoveRequest;
@@ -20,7 +21,7 @@ import reactor.core.publisher.Mono;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/files")
+@RequestMapping(ApiVersion.API_PREFIX + "/files")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "keycloak_auth")
 public class FileController {

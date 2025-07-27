@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.openfilz.dms.config.ApiVersion;
 import org.openfilz.dms.dto.request.*;
 import org.openfilz.dms.dto.response.DocumentBrief;
 import org.openfilz.dms.dto.response.DocumentInfo;
@@ -37,7 +38,7 @@ import static org.openfilz.dms.controller.ApiDescription.ALLOW_DUPLICATE_FILE_NA
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/documents")
+@RequestMapping(ApiVersion.API_PREFIX + "/documents")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "keycloak_auth")
 public class DocumentController {
@@ -63,7 +64,7 @@ public class DocumentController {
                 .map(uploadResponse -> ResponseEntity.status(HttpStatus.CREATED).body(uploadResponse));
     }
 
-    @PostMapping(value = "/uploadMultiple", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/upload-multiple", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Upload multiple documents",
             description = "Uploads multiple files, optionally with metadata and a parent folder ID.")
     public Flux<UploadResponse> uploadDocument(
@@ -89,8 +90,8 @@ public class DocumentController {
 
                     return documentService.uploadDocument(filePart,  null, fileParameters.parentFolderId(), fileParameters.metadata(), allowDuplicateFileNames, authentication);
                 })
-                .doOnComplete(() -> log.info("Finished processing all files for /uploadMultiple"))
-                .doOnError(error -> log.error("Error during /uploadMultiple processing stream: {}", error.getMessage(), error));
+                .doOnComplete(() -> log.info("Finished processing all files for /upload-multiple"))
+                .doOnError(error -> log.error("Error during /upload-multiple processing stream: {}", error.getMessage(), error));
     }
 
     private Map<String, Object> parseMetadata(String metadataJson) {

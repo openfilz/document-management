@@ -125,3 +125,8 @@ sequenceDiagram
     GW-->>-C: Final Response
 ```
 
+---
+
+## Building and Running 
+
+See [BUILD_AND_TEST.md](BUILD_AND_TEST.md) for detailed instructions on how to build, configure, and run the application locally, including how to run integration tests with Testcontainers.

@@ -1,16 +1,22 @@
 // com/example/dms/config/SecurityConfig.java
 package org.openfilz.dms.config;
 
+import org.openfilz.dms.enums.RoleTokenLookup;
+import org.openfilz.dms.service.SecurityService;
+import org.openfilz.dms.service.impl.SecurityServiceImpl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoders;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.authorization.AuthorizationContext;
 
 @Configuration
 @EnableWebFluxSecurity
@@ -22,6 +28,26 @@ public class SecurityConfig {
 
     @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
     private String issuerUri;
+
+    @Value("${spring.security.auth-class:#{null}}")
+    private String authClassName;
+
+    @Value("${spring.security.role-token-lookup:#{null}}")
+    private RoleTokenLookup roleTokenLookup;
+
+    @Bean
+    @ConditionalOnProperty(name = "spring.security.no-auth", havingValue = "false")
+    public SecurityService securityService() {
+        if(authClassName != null) {
+            try {
+                return (SecurityService) Class.forName(authClassName).getConstructor().newInstance();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return new SecurityServiceImpl(roleTokenLookup);
+    }
+
 
     @Bean
     @ConditionalOnProperty(name = "spring.security.no-auth", havingValue = "false")
@@ -49,8 +75,11 @@ public class SecurityConfig {
                                 exchanges.anyExchange().permitAll();
                             } else {
                                 exchanges.pathMatchers(AUTH_WHITELIST).permitAll() // Whitelist Swagger and health
-                                        .pathMatchers("/api/v1/**").authenticated() // Secure your API endpoints
-                                        .anyExchange().authenticated();
+                                        .pathMatchers(ApiVersion.API_PREFIX + "/**")
+                                            .access((mono, context) -> mono
+                                                .map(auth -> newAuthorizationDecision(auth, context)))
+                                        .anyExchange()
+                                        .authenticated();
                             }
                         }
                 );
@@ -60,6 +89,12 @@ public class SecurityConfig {
         }
         return http.build();
     }
+
+    private AuthorizationDecision newAuthorizationDecision(Authentication auth, AuthorizationContext context) {
+        return new AuthorizationDecision(securityService().authorize(auth, context));
+    }
+
+
 
 
 }
