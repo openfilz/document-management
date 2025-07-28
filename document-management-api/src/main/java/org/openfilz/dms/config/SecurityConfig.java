@@ -2,7 +2,7 @@
 package org.openfilz.dms.config;
 
 import org.openfilz.dms.enums.RoleTokenLookup;
-import org.openfilz.dms.service.SecurityService;
+import org.openfilz.dms.service.impl.AbstractSecurityService;
 import org.openfilz.dms.service.impl.SecurityServiceImpl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -40,10 +40,10 @@ public class SecurityConfig {
 
     @Bean
     @ConditionalOnProperty(name = "spring.security.no-auth", havingValue = "false")
-    public SecurityService securityService() {
+    public AbstractSecurityService securityService() {
         if(authClassName != null) {
             try {
-                return (SecurityService) Class.forName(authClassName).getConstructor().newInstance();
+                return (AbstractSecurityService) Class.forName(authClassName).getConstructor().newInstance();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
