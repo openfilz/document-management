@@ -24,6 +24,8 @@ public class SecurityServiceImpl implements SecurityService {
 
     private final RoleTokenLookup roleTokenLookup;
 
+    private final String rootGroupName;
+
     public boolean authorize(Authentication auth, AuthorizationContext context) {
         ServerHttpRequest request = context.getExchange().getRequest();
         HttpMethod method = request.getMethod();
@@ -76,10 +78,23 @@ public class SecurityServiceImpl implements SecurityService {
     }
 
     private boolean isAuthorized(JwtAuthenticationToken auth, Role... requiredRoles) {
-        if(roleTokenLookup == RoleTokenLookup.AUTHORITY) {
+        /*if(roleTokenLookup == RoleTokenLookup.AUTHORITIES) {
             return isInAuthorities(auth, requiredRoles);
+        }*/
+        if(roleTokenLookup == RoleTokenLookup.GROUPS) {
+            return isInGroups(auth, requiredRoles);
         }
         return isInRealmRoles(auth, requiredRoles);
+    }
+
+    private boolean isInGroups(JwtAuthenticationToken auth, Role[] requiredRoles) {
+        List<String> groups = (List<String>) auth.getTokenAttributes().get("groups");
+        if(groups != null && !groups.isEmpty()) {
+            return groups.stream().filter(g->g.startsWith(SLASH + rootGroupName + SLASH))
+                    .map(g->g.substring(rootGroupName.length() + 2))
+                    .anyMatch(g -> Arrays.stream(requiredRoles).anyMatch(r->r.toString().equals(g)));
+        }
+        return false;
     }
 
     private boolean isInRealmRoles(JwtAuthenticationToken auth, Role... requiredRoles) {
@@ -102,9 +117,9 @@ public class SecurityServiceImpl implements SecurityService {
         return null;
     }
 
-    private boolean isInAuthorities(Authentication auth, Role... requiredRoles) {
+    /*private boolean isInAuthorities(Authentication auth, Role... requiredRoles) {
         return auth.getAuthorities() != null && auth.getAuthorities().stream().anyMatch(role -> Arrays.stream(requiredRoles).anyMatch(r->r.toString().equals(role.getAuthority())));
-    }
+    }*/
 
     private boolean pathStartsWith(String path, String... contextPaths) {
         return Arrays.stream(contextPaths).anyMatch(contextPath -> pathStartsWith(path, contextPath));
