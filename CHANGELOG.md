@@ -4,21 +4,20 @@
 **[maven-release-plugin] prepare for next development iteration**
 
 
-[41750cc5f7286a8](https://github.com/openfilz/document-management/commit/41750cc5f7286a8) maven-release-bot[bot] *2025-07-26 16:18:28*
+[fb21b7110b7b34d](https://github.com/openfilz/document-management/commit/fb21b7110b7b34d) maven-release-bot[bot] *2025-07-27 18:32:59*
 
 
-## v1.0.37
+## v1.0.38
 ### No issue
 
-**[maven-release-plugin] prepare release v1.0.37**
+**[maven-release-plugin] prepare release v1.0.38**
 
 
-[40753d5c981dab6](https://github.com/openfilz/document-management/commit/40753d5c981dab6) maven-release-bot[bot] *2025-07-26 16:18:26*
+[fec86d7f1e68f9f](https://github.com/openfilz/document-management/commit/fec86d7f1e68f9f) maven-release-bot[bot] *2025-07-27 18:32:58*
 
-**Merge pull request #65**
+**Security Roles Handling in all endPoints**
 
- * develop
 
-[df4a5738c513957](https://github.com/openfilz/document-management/commit/df4a5738c513957) Yann Demel *2025-07-26 16:17:39*
+[b32a8e9f0e7a241](https://github.com/openfilz/document-management/commit/b32a8e9f0e7a241) Yann Demel *2025-07-27 18:32:15*
 
 
