@@ -1,0 +1,55 @@
+.file-list-container {
+  padding: 16px;
+}
+
+.file-list-table {
+  width: 100%;
+  background-color: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.file-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.file-row:hover {
+  background-color: #f5f5f5;
+}
+
+.file-row.selected {
+  background-color: #e3f2fd;
+}
+
+.file-name-cell {
+  cursor: pointer;
+}
+
+.file-name-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-icon {
+  color: #666;
+}
+
+.file-icon.file-type-folder {
+  color: #1976d2;
+}
+
+.file-name {
+  font-weight: 500;
+}
+
+.delete-item {
+  color: #f44336;
+}
+
+th.mat-header-cell {
+  font-weight: 600;
+  color: #333;
+}
