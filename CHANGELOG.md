@@ -4,21 +4,20 @@
 **[maven-release-plugin] prepare for next development iteration**
 
 
-[457bf5f7f069437](https://github.com/openfilz/document-management/commit/457bf5f7f069437) maven-release-bot[bot] *2025-07-28 00:48:42*
+[60c529a4f2eae97](https://github.com/openfilz/document-management/commit/60c529a4f2eae97) maven-release-bot[bot] *2025-07-28 10:45:24*
 
 
-## v1.0.41
+## v1.0.43
 ### No issue
 
-**[maven-release-plugin] prepare release v1.0.41**
+**[maven-release-plugin] prepare release v1.0.43**
 
 
-[d5138b28438c9ac](https://github.com/openfilz/document-management/commit/d5138b28438c9ac) maven-release-bot[bot] *2025-07-28 00:48:40*
+[39603705b67bdfb](https://github.com/openfilz/document-management/commit/39603705b67bdfb) maven-release-bot[bot] *2025-07-28 10:45:22*
 
-**Clean Readme**
+**Typo fix for javadoc**
 
- * Clean Readme
 
-[6bc8f1d37ab90be](https://github.com/openfilz/document-management/commit/6bc8f1d37ab90be) Yann Demel *2025-07-28 00:47:59*
+[89ec00ec901bb2b](https://github.com/openfilz/document-management/commit/89ec00ec901bb2b) Yann Demel *2025-07-28 10:44:38*
 
 
