@@ -62,10 +62,10 @@ The default authorization model uses roles extracted from the JWT token. You can
 
 For more advanced scenarios, you can provide a completely custom authorization model. To do this, you need to:
 
-1.  Create a class that implements the `org.openfilz.dms.service.SecurityService` interface.
+1.  Create a class that extends the `org.openfilz.dms.service.impl.AbstractSecurityService` class.
 2.  Specify the fully qualified name of your custom class using the `spring.security.auth-class` property.
 
-```yaml
+```yaml~~~~~~~~~~~~~~~~
 spring:
   security:
     auth-class: com.yourcompany.YourCustomSecurityService
