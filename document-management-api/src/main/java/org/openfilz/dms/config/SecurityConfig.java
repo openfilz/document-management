@@ -35,6 +35,9 @@ public class SecurityConfig {
     @Value("${spring.security.role-token-lookup:#{null}}")
     private RoleTokenLookup roleTokenLookup;
 
+    @Value("${spring.security.root-group:#{null}}")
+    private String rootGroup;
+
     @Bean
     @ConditionalOnProperty(name = "spring.security.no-auth", havingValue = "false")
     public SecurityService securityService() {
@@ -45,7 +48,7 @@ public class SecurityConfig {
                 throw new RuntimeException(e);
             }
         }
-        return new SecurityServiceImpl(roleTokenLookup);
+        return new SecurityServiceImpl(roleTokenLookup, rootGroup);
     }
 
 

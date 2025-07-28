@@ -36,7 +36,7 @@ import static org.springframework.test.context.TestConstructor.AutowireMode.ALL;
 @Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @TestConstructor(autowireMode = ALL)
-public class SecurityIntegrationIT extends TestContainersBaseConfig {
+public class SecurityIT extends TestContainersBaseConfig {
 
     @Container
     static final KeycloakContainer keycloak = new KeycloakContainer()
@@ -48,7 +48,7 @@ public class SecurityIntegrationIT extends TestContainersBaseConfig {
     private static String contributorAccessToken;
     private static String adminAccessToken;
 
-    public SecurityIntegrationIT(WebTestClient webTestClient, ObjectMapper objectMapper) {
+    public SecurityIT(WebTestClient webTestClient, ObjectMapper objectMapper) {
         super(webTestClient, objectMapper);
     }
 
