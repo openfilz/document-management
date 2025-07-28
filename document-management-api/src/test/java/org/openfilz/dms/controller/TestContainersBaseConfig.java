@@ -1,6 +1,5 @@
 package org.openfilz.dms.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.openfilz.dms.config.ApiVersion;
@@ -18,6 +17,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 
 import java.util.Arrays;
+import java.util.List;
 
 @RequiredArgsConstructor
 public abstract class TestContainersBaseConfig {
@@ -114,17 +114,10 @@ public abstract class TestContainersBaseConfig {
     }
 
     private WebTestClient.RequestHeadersSpec<?> getUploadMultipleDocumentExchangeHeader(MultipleUploadFileParameter param1, MultipleUploadFileParameter param2, MultipartBodyBuilder builder) {
-        return webTestClient.post().uri(uri -> {
-                    try {
-                        return uri.path(ApiVersion.API_PREFIX + "/documents/upload-multiple")
-                                .queryParam("allowDuplicateFileNames", true)
-                                .queryParam("parametersByFilename[]", "{parametersByFilename}", "{parametersByFilename}")
-                                .build(objectMapper.writeValueAsString(param1),
-                                        objectMapper.writeValueAsString(param2));
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
+        builder.part("parametersByFilename", List.of(param1, param2));
+        return webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload-multiple")
+                .queryParam("allowDuplicateFileNames", true)
+                .build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()));
     }

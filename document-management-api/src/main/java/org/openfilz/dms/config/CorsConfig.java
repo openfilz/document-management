@@ -13,15 +13,20 @@ import static org.openfilz.dms.config.ApiVersion.API_PREFIX;
 @Configuration
 @ConditionalOnProperty(name = "spring.security.cors-allowed-origins")
 @EnableWebFlux
-public class CorsGlobalConfiguration implements WebFluxConfigurer {
+public class CorsConfig implements WebFluxConfigurer {
 
     @Value("${spring.security.cors-allowed-origins}")
     private String[] allowedOrigins;
 
     @Override
     public void addCorsMappings(CorsRegistry corsRegistry) {
+
         corsRegistry.addMapping(API_PREFIX + "/**")
           .allowedOrigins(allowedOrigins)
-                .allowedMethods(HttpMethod.GET.name(), HttpMethod.POST.name(), HttpMethod.PUT.name(), HttpMethod.PATCH.name(), HttpMethod.DELETE.name());
+                .allowedMethods(HttpMethod.GET.name(),
+                        HttpMethod.POST.name(),
+                        HttpMethod.PUT.name(),
+                        HttpMethod.PATCH.name(),
+                        HttpMethod.DELETE.name());
     }
 }

@@ -69,7 +69,7 @@ public class DocumentController {
             description = "Uploads multiple files, optionally with metadata and a parent folder ID.")
     public Flux<UploadResponse> uploadDocument(
             @RequestPart("file") Flux<FilePart> filePartFlux,
-            @RequestParam(name = "parametersByFilename", required = false) List<MultipleUploadFileParameter> multipleUploadFileParameters,
+            @RequestPart(value = "parametersByFilename", required = false) List<MultipleUploadFileParameter> multipleUploadFileParameters,
             @Parameter(description = ALLOW_DUPLICATE_FILE_NAME_PARAM_DESCRIPTION) @RequestParam(required = false, defaultValue = "false") Boolean allowDuplicateFileNames,
             Authentication authentication) {
         final Map<String, MultipleUploadFileParameterAttributes> parametersByFilename = (multipleUploadFileParameters == null

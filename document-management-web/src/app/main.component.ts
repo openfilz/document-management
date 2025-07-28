@@ -1,6 +1,5 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClientModule } from '@angular/common/http';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -33,7 +32,6 @@ import {MatIcon} from "@angular/material/icon";
   styleUrls: ['./main.component.css'],
   imports: [
     CommonModule,
-    HttpClientModule,
     MatDialogModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
