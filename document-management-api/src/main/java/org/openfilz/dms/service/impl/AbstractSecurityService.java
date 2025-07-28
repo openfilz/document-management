@@ -26,7 +26,7 @@ public abstract class AbstractSecurityService implements SecurityService {
     }
 
     /**
-     * All GET methods and all POST methods used for search & query
+     * All GET methods and all POST methods used for search and query
      * */
     protected final boolean isQueryOrSearch(HttpMethod method, String path) {
         return (method.equals(HttpMethod.GET)
