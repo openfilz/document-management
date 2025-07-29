@@ -1,5 +1,5 @@
 <div class="breadcrumb">
-  <button mat-icon-button (click)="onNavigate('/')">
+  <button mat-icon-button (click)="onNavigate()">
     <mat-icon>home</mat-icon>
   </button>
 
@@ -10,7 +10,7 @@
                     mat-button
                     class="breadcrumb-item"
                     [class.current]="i === breadcrumbs.length - 1"
-                    (click)="onNavigate(item.path)">
+                    (click)="onNavigate(item)">
                 {{ item.name }}
             </button>
         </ng-container>

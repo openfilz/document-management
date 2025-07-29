@@ -67,7 +67,6 @@ export interface SearchByMetadataRequest {
 export interface BreadcrumbItem {
   id?: string;
   name: string;
-  path: string;
 }
 
 export interface FileItem extends FolderElementInfo {
@@ -75,4 +74,12 @@ export interface FileItem extends FolderElementInfo {
   size?: number;
   modifiedDate?: Date;
   icon?: string;
+}
+
+export class Root implements BreadcrumbItem {
+
+  public static INSTANCE = new Root();
+
+  id: string = "0"
+  name: string = "Root";
 }

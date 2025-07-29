@@ -15,13 +15,13 @@ import { RenameDialogComponent, RenameDialogData } from './dialogs/rename-dialog
 import { DocumentApiService } from './services/document-api.service';
 import { FileIconService } from './services/file-icon.service';
 
-import { 
-  FileItem, 
-  BreadcrumbItem, 
+import {
+  FileItem,
+  BreadcrumbItem,
   FolderElementInfo,
   CreateFolderRequest,
   RenameRequest,
-  DeleteRequest
+  DeleteRequest, Root
 } from './models/document.models';
 import {MatIcon} from "@angular/material/icon";
 
@@ -50,7 +50,7 @@ export class MainComponent implements OnInit {
   
   items: FileItem[] = [];
   breadcrumbs: BreadcrumbItem[] = [];
-  currentFolderId?: string;
+  currentFolder?: FileItem;
 
   constructor(
     private documentApi: DocumentApiService,
@@ -71,11 +71,11 @@ export class MainComponent implements OnInit {
     return this.items.filter(item => item.selected);
   }
 
-  loadFolder(folderId?: string) {
+  loadFolder(folder?: FileItem) {
     this.loading = true;
-    this.currentFolderId = folderId;
+    this.currentFolder = folder;
 
-    this.documentApi.listFolder(folderId).subscribe({
+    this.documentApi.listFolder(this.currentFolder?.id).subscribe({
       next: (response: FolderElementInfo[]) => {
         this.items = response.map(item => ({
           ...item,
@@ -84,7 +84,7 @@ export class MainComponent implements OnInit {
         }));
         this.showUploadZone = this.items.length === 0;
         this.loading = false;
-        this.updateBreadcrumbs(folderId);
+        this.updateBreadcrumbs(folder);
       },
       error: (error) => {
         console.error('Failed to load folder:', error);
@@ -94,12 +94,21 @@ export class MainComponent implements OnInit {
     });
   }
 
-  updateBreadcrumbs(folderId?: string) {
+  updateBreadcrumbs(folder?: FileItem) {
     // In a real app, you'd track the full path
-    this.breadcrumbs = [];
-    if (folderId) {
-      // Add breadcrumb items based on current path
-      // This is a simplified implementation
+    if (folder) {
+      const breadCrumbItem: BreadcrumbItem = {
+        id: folder.id,
+        name: folder.name,
+      };
+      const i = this.breadcrumbs.findIndex(value => value.id == breadCrumbItem.id);
+      if(i > -1) {
+        this.breadcrumbs = this.breadcrumbs.slice(0, i+1);
+      } else {
+        this.breadcrumbs = this.breadcrumbs.concat(breadCrumbItem);
+      }
+    } else {
+      this.breadcrumbs = [];
     }
   }
 
@@ -117,13 +126,13 @@ export class MainComponent implements OnInit {
       if (folderName) {
         const request: CreateFolderRequest = {
           name: folderName,
-          parentId: this.currentFolderId
+          parentId: this.currentFolder?.id
         };
 
         this.documentApi.createFolder(request).subscribe({
           next: () => {
             this.snackBar.open('Folder created successfully', 'Close', { duration: 3000 });
-            this.loadFolder(this.currentFolderId);
+            this.loadFolder(this.currentFolder);
           },
           error: (error) => {
             console.error('Failed to create folder:', error);
@@ -153,10 +162,10 @@ export class MainComponent implements OnInit {
 
   private handleFileUpload(files: FileList) {
     Array.from(files).forEach(file => {
-      this.documentApi.uploadDocument(file, this.currentFolderId).subscribe({
+      this.documentApi.uploadDocument(file, this.currentFolder?.id).subscribe({
         next: () => {
           this.snackBar.open(`${file.name} uploaded successfully`, 'Close', { duration: 3000 });
-          this.loadFolder(this.currentFolderId);
+          this.loadFolder(this.currentFolder);
         },
         error: (error) => {
           console.error(`Failed to upload ${file.name}:`, error);
@@ -173,7 +182,7 @@ export class MainComponent implements OnInit {
 
   onItemDoubleClick(item: FileItem) {
     if (item.type === 'FOLDER') {
-      this.loadFolder(item.id);
+      this.loadFolder(item);
     } else {
       this.onDownloadItem(item);
     }
@@ -204,7 +213,7 @@ export class MainComponent implements OnInit {
         renameObservable.subscribe({
           next: () => {
             this.snackBar.open('Item renamed successfully', 'Close', { duration: 3000 });
-            this.loadFolder(this.currentFolderId);
+            this.loadFolder(this.currentFolder);
           },
           error: (error) => {
             console.error('Failed to rename item:', error);
@@ -309,7 +318,7 @@ export class MainComponent implements OnInit {
       observable.subscribe({
         next: () => {
           this.snackBar.open('Items deleted successfully', 'Close', { duration: 3000 });
-          this.loadFolder(this.currentFolderId);
+          this.loadFolder(this.currentFolder);
         },
         error: (error) => {
           console.error('Failed to delete items:', error);
@@ -319,12 +328,11 @@ export class MainComponent implements OnInit {
     });
   }
 
-  onNavigate(path: string) {
-    if (path === '/') {
+  onNavigate(item: BreadcrumbItem) {
+    if (item === Root.INSTANCE) {
       this.loadFolder();
-    } else {
-      // Navigate to specific folder based on path
-      // This would need proper path-to-ID mapping in a real app
+    } else if(item.id != null) {
+      this.loadFolder({id: item.id, type: "FOLDER", name: item.name});
     }
   }
 
