@@ -9,7 +9,7 @@
 
 .search-container {
   margin: 0 16px;
-  min-width: 300px;
+  min-width: 60%;
 }
 
 .search-field {
@@ -31,6 +31,10 @@
 
 .active {
   background-color: rgba(255,255,255,0.1);
+}
+
+mat-icon {
+  color: white;
 }
 
 @media (max-width: 768px) {
