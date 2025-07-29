@@ -10,7 +10,7 @@ import org.openfilz.dms.dto.request.DeleteRequest;
 import org.openfilz.dms.dto.request.MoveRequest;
 import org.openfilz.dms.dto.request.RenameRequest;
 import org.openfilz.dms.dto.response.CopyResponse;
-import org.openfilz.dms.dto.response.DocumentBrief;
+import org.openfilz.dms.dto.response.ElementInfo;
 import org.openfilz.dms.service.DocumentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -43,9 +43,9 @@ public class FileController {
 
     @PutMapping("/{fileId}/rename")
     @Operation(summary = "Rename a file", description = "Renames an existing file.")
-    public Mono<ResponseEntity<DocumentBrief>> renameFile(@PathVariable UUID fileId, @Valid @RequestBody RenameRequest request, Authentication authentication) {
+    public Mono<ResponseEntity<ElementInfo>> renameFile(@PathVariable UUID fileId, @Valid @RequestBody RenameRequest request, Authentication authentication) {
         return documentService.renameFile(fileId, request, authentication)
-                .map(doc -> new DocumentBrief(doc.getId(), doc.getName(), doc.getType().name()))
+                .map(doc -> new ElementInfo(doc.getId(), doc.getName(), doc.getType().name()))
                 .map(ResponseEntity::ok);
     }
 

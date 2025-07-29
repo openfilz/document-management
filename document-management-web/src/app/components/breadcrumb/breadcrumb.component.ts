@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import {BreadcrumbItem, Root} from '../../models/document.models';
+import {DocumentType, ElementInfo, Root} from '../../models/document.models';
 
 @Component({
   selector: 'app-breadcrumb',
@@ -12,10 +12,10 @@ import {BreadcrumbItem, Root} from '../../models/document.models';
   imports: [CommonModule, MatButtonModule, MatIconModule],
 })
 export class BreadcrumbComponent {
-  @Input() breadcrumbs: BreadcrumbItem[] = [];
-  @Output() navigate = new EventEmitter<BreadcrumbItem>();
+  @Input() breadcrumbs: ElementInfo[] = [];
+  @Output() navigate = new EventEmitter<ElementInfo>();
 
-  onNavigate(item?: BreadcrumbItem) {
+  onNavigate(item?: ElementInfo) {
     this.navigate.emit(item != null ? item : Root.INSTANCE);
   }
 }

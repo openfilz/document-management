@@ -1,27 +1,28 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import {Component, OnInit} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {MatDialog, MatDialogModule} from '@angular/material/dialog';
+import {MatSnackBar, MatSnackBarModule} from '@angular/material/snack-bar';
+import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 
-import { ToolbarComponent } from './components/toolbar/toolbar.component';
-import { BreadcrumbComponent } from './components/breadcrumb/breadcrumb.component';
-import { FileGridComponent } from './components/file-grid/file-grid.component';
-import { FileListComponent } from './components/file-list/file-list.component';
-import { UploadZoneComponent } from './components/upload-zone/upload-zone.component';
-import { CreateFolderDialogComponent } from './dialogs/create-folder-dialog/create-folder-dialog.component';
-import { RenameDialogComponent, RenameDialogData } from './dialogs/rename-dialog/rename-dialog.component';
+import {ToolbarComponent} from './components/toolbar/toolbar.component';
+import {BreadcrumbComponent} from './components/breadcrumb/breadcrumb.component';
+import {FileGridComponent} from './components/file-grid/file-grid.component';
+import {FileListComponent} from './components/file-list/file-list.component';
+import {UploadZoneComponent} from './components/upload-zone/upload-zone.component';
+import {CreateFolderDialogComponent} from './dialogs/create-folder-dialog/create-folder-dialog.component';
+import {RenameDialogComponent, RenameDialogData} from './dialogs/rename-dialog/rename-dialog.component';
 
-import { DocumentApiService } from './services/document-api.service';
-import { FileIconService } from './services/file-icon.service';
+import {DocumentApiService} from './services/document-api.service';
+import {FileIconService} from './services/file-icon.service';
 
 import {
-  FileItem,
-  BreadcrumbItem,
-  FolderElementInfo,
   CreateFolderRequest,
+  DeleteRequest,
+  DocumentType,
+  ElementInfo,
+  FileItem,
   RenameRequest,
-  DeleteRequest, Root
+  Root
 } from './models/document.models';
 import {MatIcon} from "@angular/material/icon";
 
@@ -49,7 +50,7 @@ export class MainComponent implements OnInit {
   showUploadZone = false;
   
   items: FileItem[] = [];
-  breadcrumbs: BreadcrumbItem[] = [];
+  breadcrumbs: ElementInfo[] = [];
   currentFolder?: FileItem;
 
   constructor(
@@ -76,7 +77,7 @@ export class MainComponent implements OnInit {
     this.currentFolder = folder;
 
     this.documentApi.listFolder(this.currentFolder?.id).subscribe({
-      next: (response: FolderElementInfo[]) => {
+      next: (response: ElementInfo[]) => {
         this.items = response.map(item => ({
           ...item,
           selected: false,
@@ -97,9 +98,10 @@ export class MainComponent implements OnInit {
   updateBreadcrumbs(folder?: FileItem) {
     // In a real app, you'd track the full path
     if (folder) {
-      const breadCrumbItem: BreadcrumbItem = {
+      const breadCrumbItem: ElementInfo = {
         id: folder.id,
         name: folder.name,
+        type: DocumentType.FOLDER
       };
       const i = this.breadcrumbs.findIndex(value => value.id == breadCrumbItem.id);
       if(i > -1) {
@@ -328,11 +330,11 @@ export class MainComponent implements OnInit {
     });
   }
 
-  onNavigate(item: BreadcrumbItem) {
+  onNavigate(item: ElementInfo) {
     if (item === Root.INSTANCE) {
       this.loadFolder();
     } else if(item.id != null) {
-      this.loadFolder({id: item.id, type: "FOLDER", name: item.name});
+      this.loadFolder({id: item.id, name: item.name, type: DocumentType.FOLDER});
     }
   }
 

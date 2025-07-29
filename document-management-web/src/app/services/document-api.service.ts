@@ -2,12 +2,11 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import {
-  FolderElementInfo,
+  ElementInfo,
   DocumentInfo,
   CreateFolderRequest,
   FolderResponse,
   RenameRequest,
-  DocumentBrief,
   MoveRequest,
   CopyRequest,
   DeleteRequest,
@@ -38,13 +37,13 @@ export class DocumentApiService {
   }
 
   // Folder operations
-  listFolder(folderId?: string, onlyFiles?: boolean, onlyFolders?: boolean): Observable<FolderElementInfo[]> {
+  listFolder(folderId?: string, onlyFiles?: boolean, onlyFolders?: boolean): Observable<ElementInfo[]> {
     let params = new HttpParams();
     if (folderId) params = params.set('folderId', folderId);
     if (onlyFiles !== undefined) params = params.set('onlyFiles', onlyFiles.toString());
     if (onlyFolders !== undefined) params = params.set('onlyFolders', onlyFolders.toString());
 
-    return this.http.get<FolderElementInfo[]>(`${this.baseUrl}/folders/list`, {
+    return this.http.get<ElementInfo[]>(`${this.baseUrl}/folders/list`, {
       headers: this.getHeaders(),
       params
     });
@@ -56,8 +55,8 @@ export class DocumentApiService {
     });
   }
 
-  renameFolder(folderId: string, request: RenameRequest): Observable<DocumentBrief> {
-    return this.http.put<DocumentBrief>(`${this.baseUrl}/folders/${folderId}/rename`, request, {
+  renameFolder(folderId: string, request: RenameRequest): Observable<ElementInfo> {
+    return this.http.put<ElementInfo>(`${this.baseUrl}/folders/${folderId}/rename`, request, {
       headers: this.getHeaders()
     });
   }
@@ -82,8 +81,8 @@ export class DocumentApiService {
   }
 
   // File operations
-  renameFile(fileId: string, request: RenameRequest): Observable<DocumentBrief> {
-    return this.http.put<DocumentBrief>(`${this.baseUrl}/files/${fileId}/rename`, request, {
+  renameFile(fileId: string, request: RenameRequest): Observable<ElementInfo> {
+    return this.http.put<ElementInfo>(`${this.baseUrl}/files/${fileId}/rename`, request, {
       headers: this.getHeaders()
     });
   }

@@ -1,17 +1,13 @@
-export interface DocumentBrief {
-  id: string;
-  name: string;
-  type: string;
-}
+export enum DocumentType {FILE = "FILE", FOLDER = "FOLDER"}
 
-export interface FolderElementInfo {
+export interface ElementInfo {
   id: string;
-  type: 'FILE' | 'FOLDER';
   name: string;
+  type: DocumentType;
 }
 
 export interface DocumentInfo {
-  type: 'FILE' | 'FOLDER';
+  type: DocumentType;
   name: string;
   parentId?: string;
   metadata?: { [key: string]: any };
@@ -58,28 +54,24 @@ export interface UploadResponse {
 
 export interface SearchByMetadataRequest {
   name?: string;
-  type?: 'FILE' | 'FOLDER';
+  type?: DocumentType;
   parentFolderId?: string;
   rootOnly?: boolean;
   metadataCriteria?: { [key: string]: any };
 }
 
-export interface BreadcrumbItem {
-  id?: string;
-  name: string;
-}
-
-export interface FileItem extends FolderElementInfo {
+export interface FileItem extends ElementInfo {
   selected?: boolean;
   size?: number;
   modifiedDate?: Date;
   icon?: string;
 }
 
-export class Root implements BreadcrumbItem {
+export class Root implements ElementInfo {
 
   public static INSTANCE = new Root();
 
-  id: string = "0"
-  name: string = "Root";
+  id = "0"
+  name = "Root"
+  type = DocumentType.FOLDER
 }

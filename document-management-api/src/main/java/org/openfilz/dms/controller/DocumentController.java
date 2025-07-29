@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openfilz.dms.config.ApiVersion;
 import org.openfilz.dms.dto.request.*;
-import org.openfilz.dms.dto.response.DocumentBrief;
+import org.openfilz.dms.dto.response.ElementInfo;
 import org.openfilz.dms.dto.response.DocumentInfo;
 import org.openfilz.dms.dto.response.UploadResponse;
 import org.openfilz.dms.service.DocumentService;
@@ -111,38 +111,38 @@ public class DocumentController {
 
     @PutMapping(value = "/{documentId}/replace-content", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Replace document content", description = "Replaces the content of an existing file document.")
-    public Mono<ResponseEntity<DocumentBrief>> replaceDocumentContent(
+    public Mono<ResponseEntity<ElementInfo>> replaceDocumentContent(
             @PathVariable UUID documentId,
             @RequestPart("file") Mono<FilePart> newFilePartMono,
             @Parameter(hidden = true) @RequestHeader(name = "Content-Length", required = false) Long contentLength,
             Authentication authentication) {
         return newFilePartMono.flatMap(filePart -> documentService.replaceDocumentContent(documentId, filePart, contentLength, authentication))
-                .map(doc -> new DocumentBrief(doc.getId(), doc.getName(), doc.getType().name()))
+                .map(doc -> new ElementInfo(doc.getId(), doc.getName(), doc.getType().name()))
                 .map(ResponseEntity::ok);
     }
 
     @PutMapping("/{documentId}/replace-metadata")
     @Operation(summary = "Replace document metadata", description = "Replaces all metadata of a document (file or folder).")
-    public Mono<ResponseEntity<DocumentBrief>> replaceDocumentMetadata(
+    public Mono<ResponseEntity<ElementInfo>> replaceDocumentMetadata(
             @Parameter(name = "documentId") @PathVariable UUID documentId,
             @RequestBody(description = "New metadata map. Replaces all existing metadata.", required = true,
                     content = @Content(schema = @Schema(type = "object", additionalProperties = Schema.AdditionalPropertiesValue.TRUE)))
             @org.springframework.web.bind.annotation.RequestBody Map<String, Object> newMetadata, // Spring's RequestBody
             Authentication authentication) {
         return documentService.replaceDocumentMetadata(documentId, newMetadata, authentication)
-                .map(doc -> new DocumentBrief(doc.getId(), doc.getName(), doc.getType().name()))
+                .map(doc -> new ElementInfo(doc.getId(), doc.getName(), doc.getType().name()))
                 .map(ResponseEntity::ok);
     }
 
 
     @PatchMapping("/{documentId}/metadata")
     @Operation(summary = "Update document metadata", description = "Updates or adds specific metadata fields for a document.")
-    public Mono<ResponseEntity<DocumentBrief>> updateDocumentMetadata(
+    public Mono<ResponseEntity<ElementInfo>> updateDocumentMetadata(
             @PathVariable UUID documentId,
             @Valid @org.springframework.web.bind.annotation.RequestBody UpdateMetadataRequest request,
             Authentication authentication) {
         return documentService.updateDocumentMetadata(documentId, request, authentication)
-                .map(doc -> new DocumentBrief(doc.getId(), doc.getName(), doc.getType().name()))
+                .map(doc -> new ElementInfo(doc.getId(), doc.getName(), doc.getType().name()))
                 .map(ResponseEntity::ok);
     }
 
