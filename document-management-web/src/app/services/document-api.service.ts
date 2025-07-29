@@ -13,12 +13,13 @@ import {
   UploadResponse,
   SearchByMetadataRequest
 } from '../models/document.models';
+import {environment} from "../../environments/environment";
 
 @Injectable({
   providedIn: 'root'
 })
 export class DocumentApiService {
-  private readonly baseUrl = 'http://localhost:8081/api/v1';
+  private readonly baseUrl = environment.apiURL;
   private readonly authToken = 'your-jwt-token-here'; // In real app, get from auth service
 
   constructor(private http: HttpClient) {}
