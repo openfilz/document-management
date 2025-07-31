@@ -1,0 +1,27 @@
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">
+      <mat-icon class="logo-icon">folder</mat-icon>
+      <span class="logo-text">Openfilz</span>
+    </div>
+  </div>
+
+  <div class="sidebar-content">
+    <mat-nav-list>
+      <mat-list-item 
+        *ngFor="let item of navigationItems" 
+        [class.active]="item.active"
+        (click)="onNavigationClick(item.id)">
+        <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+        <span matListItemTitle>{{ item.label }}</span>
+      </mat-list-item>
+    </mat-nav-list>
+  </div>
+
+  <div class="sidebar-footer">
+    <mat-list-item (click)="onNavigationClick('settings')">
+      <mat-icon matListItemIcon>settings</mat-icon>
+      <span matListItemTitle>Settings</span>
+    </mat-list-item>
+  </div>
+</div>
