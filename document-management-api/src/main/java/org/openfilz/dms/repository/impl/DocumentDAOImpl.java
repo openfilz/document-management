@@ -1,17 +1,17 @@
 package org.openfilz.dms.repository.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openfilz.dms.dto.request.SearchByMetadataRequest;
 import org.openfilz.dms.repository.DocumentDAO;
+import org.openfilz.dms.utils.SqlUtils;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
 import java.util.UUID;
 
+import static org.openfilz.dms.entity.DocumentSqlMapping.*;
 import static org.openfilz.dms.utils.SqlUtils.isFirst;
 
 @Service
@@ -19,9 +19,10 @@ import static org.openfilz.dms.utils.SqlUtils.isFirst;
 @Slf4j
 public class DocumentDAOImpl implements DocumentDAO {
 
+    public static final String SELECT_ID_FROM_DOCUMENTS = "SELECT id FROM documents";
     private final DatabaseClient databaseClient;
 
-    private  final ObjectMapper objectMapper;
+    private  final SqlUtils sqlUtils;
 
     @Override
     public Flux<UUID> listDocumentIds(SearchByMetadataRequest request) {
@@ -38,48 +39,45 @@ public class DocumentDAOImpl implements DocumentDAO {
                 && !metadataCriteria) {
             return Flux.error(new IllegalArgumentException("All criteria cannot be empty."));
         }
-        StringBuilder sql = new StringBuilder("SELECT id FROM documents WHERE ");
+        StringBuilder sql = new StringBuilder(SELECT_ID_FROM_DOCUMENTS);
         boolean first = true;
         if(metadataCriteria) {
-            sql.append("metadata @> :criteria::jsonb ");
-            first = false;
+            first = isFirst(first, sql);
+            sqlUtils.appendJsonEqualsCriteria(METADATA, sql);
         }
         if(nameCriteria) {
             first = isFirst(first, sql);
-            sql.append("name = :name ");
+            sqlUtils.appendEqualsCriteria(NAME, sql);
         }
         if(typeCriteria) {
             first = isFirst(first, sql);
-            sql.append("type = :type ");
+            sqlUtils.appendEqualsCriteria(TYPE, sql);
         }
         if(parentFolderCriteria) {
             first = isFirst(first, sql);
-            sql.append("parent_id = :parent_id ");
+            sqlUtils.appendEqualsCriteria(PARENT_ID, sql);
         }
         if(rootOnlyCriteria) {
             isFirst(first, sql);
-            sql.append("parent_id is null");
+            sqlUtils.appendIsNullCriteria(PARENT_ID, sql);
         }
         DatabaseClient.GenericExecuteSpec query = databaseClient.sql(sql.toString());
         if(metadataCriteria) {
-            try {
-                String criteriaJson = objectMapper.writeValueAsString(request.metadataCriteria());
-                query = query.bind("criteria", criteriaJson);
-            } catch (JsonProcessingException e) {
-                throw new RuntimeException(e);
-            }
+            query = sqlUtils.bindMetadata(request.metadataCriteria(),  query);
         }
         if(nameCriteria) {
-            query = query.bind("name", request.name());
+            query = sqlUtils.bindCriteria(NAME, request.name(), query);
         }
         if(typeCriteria) {
-            query = query.bind("type", request.type().toString());
+            query = sqlUtils.bindCriteria(TYPE, request.type().toString(), query);
         }
         if(parentFolderCriteria) {
-            query = query.bind("parent_id", request.parentFolderId());
+            query = sqlUtils.bindCriteria(PARENT_ID, request.parentFolderId(), query);
         }
-        return query.map( row -> row.get("id", UUID.class)).all();
+        return query.map( row -> row.get(ID, UUID.class)).all();
     }
+
+
 
 
 }

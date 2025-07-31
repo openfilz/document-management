@@ -32,6 +32,11 @@ spring:
   sql:
     init:
       mode: always
+
+  graphql:
+    graphiql:
+      enabled: true
+
 # Storage Configuration
 storage:
   type: local # local or minio
@@ -62,6 +67,8 @@ logging:
     # org.springframework: DEBUG
 server:
   port: 8081
+
+
 
 # Database schema initialization (e.g., Flyway or Liquibase if preferred)
 # For simple R2DBC, you might use an InitializingBean to create tables

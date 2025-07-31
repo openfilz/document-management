@@ -19,38 +19,41 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table("documents")
-public class Document {
+public class Document implements DocumentSqlMapping {
+
     @Id
+    @Column(ID)
     private UUID id;
 
+    @Column(NAME)
     private String name;
 
-    @Column("type")
+    @Column(TYPE)
     private DocumentType type;
 
-    @Column("content_type")
+    @Column(CONTENT_TYPE)
     private String contentType; // MIME type
 
     private Long size; // in bytes
 
-    @Column("parent_id")
+    @Column(PARENT_ID)
     private UUID parentId; // Null if root
 
-    @Column("storage_path")
+    @Column(STORAGE_PATH)
     private String storagePath; // Path in FS or object key in S3
 
-    @Column("metadata")
+    @Column(METADATA)
     private Json metadata; // Stored as JSONB
 
-    @Column("created_at")
+    @Column(CREATED_AT)
     private OffsetDateTime createdAt;
 
-    @Column("updated_at")
+    @Column(UPDATED_AT)
     private OffsetDateTime updatedAt;
 
-    @Column("created_by")
+    @Column(CREATED_BY)
     private String createdBy;
 
-    @Column("updated_by")
+    @Column(UPDATED_BY)
     private String updatedBy;
 }
