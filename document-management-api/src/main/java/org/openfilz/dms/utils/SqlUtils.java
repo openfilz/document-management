@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.r2dbc.core.DatabaseClient;
 import org.springframework.stereotype.Component;
 
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 @RequiredArgsConstructor
@@ -17,6 +19,14 @@ public class SqlUtils {
     public static final String SPACE = " ";
 
     private final ObjectMapper objectMapper;
+
+    public static String dateToString(OffsetDateTime date) {
+        return date.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    }
+
+    public static OffsetDateTime stringToDate(String date) {
+        return OffsetDateTime.parse(date);
+    }
 
     public static boolean isFirst(boolean first, StringBuilder sql) {
         if(!first) {

@@ -12,6 +12,7 @@ import org.openfilz.dms.dto.response.FolderResponse;
 import org.openfilz.dms.dto.response.UploadResponse;
 import org.openfilz.dms.enums.DocumentType;
 import org.openfilz.dms.enums.SortOrder;
+import org.openfilz.dms.utils.SqlUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.ParameterizedTypeReference;
@@ -196,10 +197,10 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 "tes",
                 Map.of("testId", uuid0.toString()),
                 75L,
-                OffsetDateTime.now().minusDays(1L),
+                SqlUtils.dateToString(OffsetDateTime.now().minusDays(1L)),
                 null, //OffsetDateTime.now().plusHours(1L),
                 null, //OffsetDateTime.now().minusHours(1L),
-                OffsetDateTime.now().plusDays(1L),
+                SqlUtils.dateToString(OffsetDateTime.now().plusDays(1L)),
                 "anonymousUser"
                 , "anonymousUser",
                 new PageCriteria(null, null, 1, 100));
@@ -239,10 +240,10 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 null,
                 Map.of("testId", uuid0.toString()),
                 75L,
-                OffsetDateTime.now().minusDays(1L),
-                OffsetDateTime.now().plusDays(1L),
-                OffsetDateTime.now().minusDays(1L),
-                OffsetDateTime.now().plusDays(1L),
+                SqlUtils.dateToString(OffsetDateTime.now().minusDays(1L)),
+                SqlUtils.dateToString(OffsetDateTime.now().plusDays(1L)),
+                SqlUtils.dateToString(OffsetDateTime.now().minusDays(1L)),
+                SqlUtils.dateToString(OffsetDateTime.now().plusDays(1L)),
                 "anonymousUser"
                 , "anonymousUser",
                 new PageCriteria(null, null, 1, 100));
