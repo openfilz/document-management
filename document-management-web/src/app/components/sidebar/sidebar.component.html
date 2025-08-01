@@ -8,13 +8,14 @@
 
   <div class="sidebar-content">
     <mat-nav-list>
-      <mat-list-item 
-        *ngFor="let item of navigationItems" 
-        [class.active]="item.active"
-        (click)="onNavigationClick(item.id)">
-        <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-        <span matListItemTitle>{{ item.label }}</span>
-      </mat-list-item>
+        @for(item of navigationItems; track item.id) {
+        <mat-list-item
+                [class.active]="item.active"
+                (click)="onNavigationClick(item.id)">
+            <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+            <span matListItemTitle>{{ item.label }}</span>
+        </mat-list-item>
+        }
     </mat-nav-list>
   </div>
 
