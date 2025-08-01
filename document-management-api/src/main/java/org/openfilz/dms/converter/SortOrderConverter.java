@@ -9,7 +9,7 @@ import org.springframework.core.convert.converter.Converter;
 @Configuration
 @RequiredArgsConstructor
 @ConfigurationPropertiesBinding
-public class StringToEnumConverter implements Converter<String, SortOrder> {
+public class SortOrderConverter implements Converter<String, SortOrder> {
     @Override
     public SortOrder convert(String source) {
         try {

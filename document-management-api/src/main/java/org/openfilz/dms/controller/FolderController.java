@@ -6,9 +6,9 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.openfilz.dms.config.ApiVersion;
+import org.openfilz.dms.config.RestApiVersion;
 import org.openfilz.dms.dto.request.*;
-import org.openfilz.dms.dto.response.DocumentBrief;
+import org.openfilz.dms.dto.response.ElementInfo;
 import org.openfilz.dms.dto.response.FolderElementInfo;
 import org.openfilz.dms.dto.response.FolderResponse;
 import org.openfilz.dms.service.DocumentService;
@@ -22,7 +22,7 @@ import reactor.core.publisher.Mono;
 import java.util.UUID;
 
 @RestController
-@RequestMapping(ApiVersion.API_PREFIX + "/folders")
+@RequestMapping(RestApiVersion.API_PREFIX + "/folders")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "keycloak_auth") // For Swagger UI
 public class FolderController {
@@ -52,9 +52,9 @@ public class FolderController {
 
     @PutMapping("/{folderId}/rename")
     @Operation(summary = "Rename a folder", description = "Renames an existing folder.")
-    public Mono<ResponseEntity<DocumentBrief>> renameFolder(@PathVariable UUID folderId, @Valid @RequestBody RenameRequest request, Authentication authentication) {
+    public Mono<ResponseEntity<ElementInfo>> renameFolder(@PathVariable UUID folderId, @Valid @RequestBody RenameRequest request, Authentication authentication) {
         return documentService.renameFolder(folderId, request, authentication)
-                .map(doc -> new DocumentBrief(doc.getId(), doc.getName(), doc.getType().name()))
+                .map(doc -> new ElementInfo(doc.getId(), doc.getName(), doc.getType().name()))
                 .map(ResponseEntity::ok);
     }
 

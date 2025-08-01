@@ -1,6 +1,5 @@
 package org.openfilz.dms.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -16,8 +15,8 @@ import static org.springframework.test.context.TestConstructor.AutowireMode.ALL;
 @TestConstructor(autowireMode = ALL)
 public class GroupsSecurityIT extends SecurityIT {
 
-    public GroupsSecurityIT(WebTestClient webTestClient, ObjectMapper objectMapper) {
-        super(webTestClient, objectMapper);
+    public GroupsSecurityIT(WebTestClient webTestClient) {
+        super(webTestClient);
     }
 
     @DynamicPropertySource

@@ -6,7 +6,7 @@ import org.openfilz.dms.enums.DocumentType;
 
 import java.util.Map;
 import java.util.UUID;
-
+/**/
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record DocumentInfo(
         @Schema(description = "Type of the document") DocumentType type,

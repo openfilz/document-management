@@ -23,6 +23,7 @@ import org.springframework.security.web.server.authorization.AuthorizationContex
 @EnableReactiveMethodSecurity // For method-level security like @PreAuthorize
 public class SecurityConfig {
 
+    public static final String ALL_MATCHES = "/**";
     @Value("${spring.security.no-auth}")
     private Boolean noAuth;
 
@@ -38,6 +39,9 @@ public class SecurityConfig {
     @Value("${spring.security.root-group:#{null}}")
     private String rootGroup;
 
+    @Value("${spring.graphql.http.path:/graphql}")
+    protected String graphQlBaseUrl;
+
     @Bean
     @ConditionalOnProperty(name = "spring.security.no-auth", havingValue = "false")
     public AbstractSecurityService securityService() {
@@ -48,7 +52,7 @@ public class SecurityConfig {
                 throw new RuntimeException(e);
             }
         }
-        return new SecurityServiceImpl(roleTokenLookup, rootGroup);
+        return new SecurityServiceImpl(roleTokenLookup, rootGroup, graphQlBaseUrl);
     }
 
 
@@ -78,7 +82,7 @@ public class SecurityConfig {
                                 exchanges.anyExchange().permitAll();
                             } else {
                                 exchanges.pathMatchers(AUTH_WHITELIST).permitAll() // Whitelist Swagger and health
-                                        .pathMatchers(ApiVersion.API_PREFIX + "/**")
+                                        .pathMatchers(RestApiVersion.API_PREFIX + ALL_MATCHES, graphQlBaseUrl + ALL_MATCHES)
                                             .access((mono, context) -> mono
                                                 .map(auth -> newAuthorizationDecision(auth, context)))
                                         .anyExchange()
