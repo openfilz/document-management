@@ -1,10 +1,9 @@
 package org.openfilz.dms.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.openfilz.dms.config.ApiVersion;
+import org.openfilz.dms.config.RestApiVersion;
 import org.openfilz.dms.dto.audit.AuditLog;
 import org.openfilz.dms.dto.request.*;
 import org.openfilz.dms.dto.response.DocumentInfo;
@@ -18,6 +17,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
+import org.springframework.graphql.client.ClientGraphQlResponse;
+import org.springframework.graphql.client.HttpGraphQlClient;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -27,6 +28,8 @@ import org.springframework.test.context.TestConstructor;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,6 +38,7 @@ import java.nio.channels.FileChannel;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -56,8 +60,284 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     @Autowired
     private DatabaseClient databaseClient;
 
-    public DocumentManagementLocalStorageIT(WebTestClient webTestClient, ObjectMapper objectMapper) {
-        super(webTestClient, objectMapper);
+    private HttpGraphQlClient graphQlHttpClient;
+
+    public DocumentManagementLocalStorageIT(WebTestClient webTestClient) {
+        super(webTestClient);
+
+    }
+
+    @Test
+    void whenListFolderGraphQlNoPaging_thenError() {
+        HttpGraphQlClient httpGraphQlClient = getGraphQlHttpClient();
+        //create post
+        ListFolderRequest request = new ListFolderRequest(null, null, null, null, null, null, null, null, null, null, null, null
+                , null, null);
+        var graphQlRequest = """
+                query listFolder($request:ListFolderRequest) {
+                    listFolder(request:$request) {
+                      id
+                      contentType
+                      type
+                      name
+                      metadata
+                    }
+                }
+                """.trim();
+
+        Mono<ClientGraphQlResponse> response = httpGraphQlClient
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+        StepVerifier.create(response)
+                .expectNextMatches(doc->!doc.getErrors().isEmpty())
+                .expectComplete()
+                .verify();
+
+        request = new ListFolderRequest(null, null, null, "toto", "tutu", null, null, null, null, null, null, null
+                , null, new PageCriteria("name", SortOrder.ASC, 1, 100));
+
+        graphQlRequest = """
+                query listFolder($request:ListFolderRequest) {
+                    listFolder(request:$request) {
+                      id
+                      contentType
+                      type
+                      name
+                      metadata
+                    }
+                }
+                """.trim();
+
+        response = httpGraphQlClient
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+        StepVerifier.create(response)
+                .expectNextMatches(doc->!doc.getErrors().isEmpty())
+                .expectComplete()
+                .verify();
+    }
+
+    @Test
+    void whenListFolderGraphQl_thenOK() {
+        MultipartBodyBuilder builder = newFileBuilder("schema.sql", "test.txt");
+
+        UUID uuid0 = UUID.randomUUID();
+
+        UUID uuid1 = UUID.randomUUID();
+        Map<String, Object> metadata1 = Map.of("testId", uuid0.toString(), "appId", uuid1.toString());
+
+        UUID uuid2 = UUID.randomUUID();
+        Map<String, Object> metadata2 = Map.of("testId", uuid0.toString(), "appId", uuid2.toString());
+
+        MultipleUploadFileParameter param1 = new MultipleUploadFileParameter("schema.sql", new MultipleUploadFileParameterAttributes(null, metadata1));
+        MultipleUploadFileParameter param2 = new MultipleUploadFileParameter("test.txt", new MultipleUploadFileParameterAttributes(null, metadata2));
+
+        List<UploadResponse> uploadResponse = getUploadMultipleDocumentExchange(param1, param2, builder)
+                .expectStatus().isOk()
+                .expectBody(new ParameterizedTypeReference<List<UploadResponse>>() {})
+                .returnResult().getResponseBody();
+        Assertions.assertNotNull(uploadResponse);
+        UploadResponse uploadResponse1 = uploadResponse.get(0);
+        Assertions.assertEquals(param1.filename(), uploadResponse1.name());
+        UploadResponse uploadResponse2 = uploadResponse.get(1);
+        Assertions.assertEquals(param2.filename(), uploadResponse2.name());
+
+        HttpGraphQlClient httpGraphQlClient = getGraphQlHttpClient();
+        //create post
+        ListFolderRequest request = new ListFolderRequest(null, null, null, null, null, Map.of("testId", uuid0.toString()), null, null, null, null, null, null
+                , null, new PageCriteria("name", SortOrder.ASC, 1, 100));
+        var graphQlRequest = """
+                query listFolder($request:ListFolderRequest) {
+                    listFolder(request:$request) {
+                      id
+                      contentType
+                      type
+                      name
+                      metadata
+                    }
+                }
+                """.trim();
+
+        Mono<ClientGraphQlResponse> response = httpGraphQlClient
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+        UUID finalUuid = uuid1;
+        UUID finalUuid1 = uuid2;
+        StepVerifier.create(response)
+                .expectNextMatches(doc -> checkListFoldersReturnedSize(doc, 2)
+                        && checkListFoldersReturnedItem(doc, 0, "appId", finalUuid.toString())
+                        && checkListFoldersReturnedItem(doc, 1, "appId", finalUuid1.toString()))
+                .expectComplete()
+                .verify();
+
+        request = new ListFolderRequest(null, DocumentType.FOLDER, null, null, null, Map.of("testId", uuid0.toString()), null, null, null, null, null, null
+                , null, new PageCriteria(null, null, 1, 100));
+        graphQlRequest = """
+                query listFolder($request:ListFolderRequest) {
+                    listFolder(request:$request) {
+                      id
+                      contentType
+                      type
+                      name
+                      metadata
+                      size
+                      createdAt
+                      updatedAt
+                      createdBy
+                      updatedBy
+                    }
+                }
+                """.trim();
+
+        response = httpGraphQlClient
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+        StepVerifier.create(response)
+                .expectNextMatches(doc -> checkListFoldersReturnedSize(doc, 0))
+                .expectComplete()
+                .verify();
+
+        CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-graphQl", null);
+
+        UploadResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
+                .body(BodyInserters.fromValue(createFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        builder = newFileBuilder("schema.sql", "test.txt");
+
+        uuid0 = UUID.randomUUID();
+
+        uuid1 = UUID.randomUUID();
+        metadata1 = Map.of("testId", uuid0.toString(), "appId", uuid1.toString());
+
+        uuid2 = UUID.randomUUID();
+        metadata2 = Map.of("testId", uuid0.toString(), "appId", uuid2.toString());
+
+        param1 = new MultipleUploadFileParameter("schema.sql", new MultipleUploadFileParameterAttributes(folderResponse.id(), metadata1));
+        param2 = new MultipleUploadFileParameter("test.txt", new MultipleUploadFileParameterAttributes(folderResponse.id(), metadata2));
+
+        uploadResponse = getUploadMultipleDocumentExchange(param1, param2, builder)
+                .expectStatus().isOk()
+                .expectBody(new ParameterizedTypeReference<List<UploadResponse>>() {})
+                .returnResult().getResponseBody();
+        Assertions.assertNotNull(uploadResponse);
+        uploadResponse1 = uploadResponse.get(0);
+        Assertions.assertEquals(param1.filename(), uploadResponse1.name());
+        uploadResponse2 = uploadResponse.get(1);
+        Assertions.assertEquals(param2.filename(), uploadResponse2.name());
+
+        request = new ListFolderRequest(
+                folderResponse.id(),
+                DocumentType.FILE,
+                "text/plain",
+                null,
+                "tes",
+                Map.of("testId", uuid0.toString()),
+                75L,
+                OffsetDateTime.now().minusDays(1L),
+                null, //OffsetDateTime.now().plusHours(1L),
+                null, //OffsetDateTime.now().minusHours(1L),
+                OffsetDateTime.now().plusHours(1L),
+                "anonymousUser"
+                , "anonymousUser",
+                new PageCriteria(null, null, 1, 100));
+        graphQlRequest = """
+                query listFolder($request:ListFolderRequest) {
+                    listFolder(request:$request) {
+                      id
+                      contentType
+                      type
+                      name
+                      metadata
+                      size
+                      createdAt
+                      updatedAt
+                      createdBy
+                      updatedBy
+                    }
+                }
+                """.trim();
+
+        response = httpGraphQlClient
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+        StepVerifier.create(response)
+                .expectNextMatches(doc -> checkListFoldersReturnedSize(doc, 1))
+                .expectComplete()
+                .verify();
+
+        request = new ListFolderRequest(
+                folderResponse.id(),
+                DocumentType.FILE,
+                "text/plain",
+                "test.txt",
+                null,
+                Map.of("testId", uuid0.toString()),
+                75L,
+                OffsetDateTime.now().minusDays(1L),
+                OffsetDateTime.now().plusHours(1L),
+                OffsetDateTime.now().minusHours(1L),
+                OffsetDateTime.now().plusHours(1L),
+                "anonymousUser"
+                , "anonymousUser",
+                new PageCriteria(null, null, 1, 100));
+        graphQlRequest = """
+                query listFolder($request:ListFolderRequest) {
+                    listFolder(request:$request) {
+                      id
+                      contentType
+                      type
+                      name
+                      metadata
+                      size
+                      createdAt
+                      updatedAt
+                      createdBy
+                      updatedBy
+                    }
+                }
+                """.trim();
+
+        response = httpGraphQlClient
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+        StepVerifier.create(response)
+                .expectNextMatches(doc -> checkListFoldersReturnedSize(doc, 1))
+                .expectComplete()
+                .verify();
+
+    }
+
+    private boolean checkListFoldersReturnedItem(ClientGraphQlResponse doc, int itemIndex, String metadataKey, String metadataValue) {
+        List<Map<String, Object>> items = (List<Map<String, Object>>) ((Map<String, Map<String, Object>>) doc.getData()).get("listFolder");
+        return ((Map<String, Object>) items.get(itemIndex).get("metadata")).get(metadataKey).equals(metadataValue);
+        //return items.stream().anyMatch(map->((Map<String, Object>) map.get("metadata")).get(metadataKey).equals(metadataValue));
+    }
+
+    private boolean checkListFoldersReturnedSize(ClientGraphQlResponse doc, int expectedSize) {
+        return ((List<Map<String, Object>>) ((Map<String, Map<String, Object>>) doc.getData()).get("listFolder")).size() == expectedSize;
+    }
+
+    private HttpGraphQlClient getGraphQlHttpClient() {
+        if(graphQlHttpClient == null) {
+            graphQlHttpClient = newGraphQlClient();
+        }
+        return graphQlHttpClient;
     }
 
     @Test
@@ -97,7 +377,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     private void checkFileInfo(UploadResponse uploadResponse, MultipleUploadFileParameter param, Map<String, Object> metadata) {
         DocumentInfo info2 = webTestClient.get().uri(uri ->
-                        uri.path(ApiVersion.API_PREFIX + "/documents/{id}/info")
+                        uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/info")
                                 .queryParam("withMetadata", true)
                                 .build(uploadResponse.id()))
                 .exchange()
@@ -112,7 +392,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     void whenUploadTwiceSameDocument_thenConflict() {
         MultipartBodyBuilder builder = newFileBuilder();
 
-        webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload")
+        webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/upload")
                         .queryParam("allowDuplicateFileNames", true)
                         .build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
@@ -120,7 +400,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .exchange()
                 .expectStatus().isCreated();
 
-        webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload")
+        webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/upload")
                         .build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()))
@@ -138,7 +418,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         Assertions.assertNotNull(uploadResponse);
 
-        Map<String, Object> metadata = webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/search/metadata")
+        Map<String, Object> metadata = webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/search/metadata")
                         .build(uploadResponse.id()))
                 .exchange()
                 .expectStatus().isOk()
@@ -150,7 +430,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         Assertions.assertEquals("OpenFilz", metadata.get("owner"));
         Assertions.assertEquals("MY_APP_1", metadata.get("appId"));
 
-        metadata = webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/search/metadata")
+        metadata = webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/search/metadata")
                         .build(uploadResponse.id()))
                 .body(BodyInserters.fromValue(new SearchMetadataRequest(List.of("owner"))))
                 .exchange()
@@ -177,7 +457,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         SearchByMetadataRequest searchByMetadataRequest = new SearchByMetadataRequest(null, null, null, null, Map.of("appId", uuid.toString()));
 
-        List<UUID> uuids = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        List<UUID> uuids = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -191,7 +471,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         searchByMetadataRequest = new SearchByMetadataRequest(null, DocumentType.FILE, null, null, Map.of("appId", uuid.toString()));
 
-        uuids = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        uuids = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -205,7 +485,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         searchByMetadataRequest = new SearchByMetadataRequest(null, DocumentType.FILE, UUID.randomUUID(), null, Map.of("appId", uuid.toString()));
 
-        uuids = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        uuids = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -218,7 +498,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         searchByMetadataRequest = new SearchByMetadataRequest("schema.sql", DocumentType.FILE, null, null, Map.of("appId", uuid.toString()));
 
-        uuids = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        uuids = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -232,7 +512,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         searchByMetadataRequest = new SearchByMetadataRequest("schema.sql", DocumentType.FILE, null, true, Map.of("appId", uuid.toString()));
 
-        uuids = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        uuids = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -246,7 +526,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         searchByMetadataRequest = new SearchByMetadataRequest("schema.sql", DocumentType.FOLDER, null, true, Map.of("appId", uuid.toString()));
 
-        uuids = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        uuids = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -259,21 +539,21 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         searchByMetadataRequest = new SearchByMetadataRequest("schema.sql", DocumentType.FOLDER, UUID.randomUUID(), true, Map.of("appId", uuid.toString()));
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
 
         searchByMetadataRequest = new SearchByMetadataRequest(null, null, null, null, null);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
 
         searchByMetadataRequest = new SearchByMetadataRequest("schema.sql", DocumentType.FILE, null, true, null);
 
-        uuids = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        uuids = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -286,7 +566,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         searchByMetadataRequest = new SearchByMetadataRequest("schema.sql", DocumentType.FILE, null, null, null);
 
-        uuids = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        uuids = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -299,7 +579,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         searchByMetadataRequest = new SearchByMetadataRequest("schema.sql", null, null, null, null);
 
-        uuids = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        uuids = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -322,7 +602,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         searchByMetadataRequest = new SearchByMetadataRequest(null, null, null, null, Map.of("appId", uuid.toString()));
 
-        uuids = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        uuids = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -337,7 +617,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         searchByMetadataRequest = new SearchByMetadataRequest(null, null, null, null, Map.of("appId", uuid.toString(), "owner", "Joe"));
 
-        uuids = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        uuids = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -359,7 +639,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         Assertions.assertNotNull(uploadResponse);
 
-        Map<String, Object> metadata = webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/search/metadata")
+        Map<String, Object> metadata = webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/search/metadata")
                         .build(uploadResponse.id()))
                 .body(BodyInserters.fromValue(new SearchMetadataRequest(List.of("owner", "appId"))))
                 .exchange()
@@ -374,7 +654,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         Assertions.assertTrue(metadata.containsKey("appId"));
         Assertions.assertEquals("MY_APP_1", metadata.get("appId"));
 
-        metadata = webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/search/metadata")
+        metadata = webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/search/metadata")
                         .build(uploadResponse.id()))
                 .body(BodyInserters.fromValue(new SearchMetadataRequest(List.of("owner1", "appId"))))
                 .exchange()
@@ -389,7 +669,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         Assertions.assertTrue(metadata.containsKey("appId"));
         Assertions.assertEquals("MY_APP_1", metadata.get("appId"));
 
-        webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/search/metadata")
+        webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/search/metadata")
                         .build(UUID.randomUUID().toString()))
                 .exchange()
                 .expectStatus().isNotFound();
@@ -409,7 +689,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         Assertions.assertTrue(originalSize != null   && originalSize > 0);
         builder = new MultipartBodyBuilder();
         builder.part("file", new ClassPathResource("test.txt"));
-        webTestClient.put().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/replace-content")
+        webTestClient.put().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/replace-content")
                         .build(id.toString()))
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()))
@@ -421,7 +701,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .jsonPath("$.id").isEqualTo(id.toString());
 
         DocumentInfo info = webTestClient.get().uri(uri ->
-                        uri.path(ApiVersion.API_PREFIX + "/documents/{id}/info")
+                        uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/info")
                                 .queryParam("withMetadata", true)
                                 .build(id.toString()))
                 .exchange()
@@ -443,7 +723,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         corruptStoragePath(id);
 
-        webTestClient.get().uri(ApiVersion.API_PREFIX + "/documents/{id}/download", id)
+        webTestClient.get().uri(RestApiVersion.API_PREFIX + "/documents/{id}/download", id)
                         .exchange()
                         .expectStatus().is5xxServerError();
     }
@@ -460,7 +740,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         DeleteRequest deleteRequest = new DeleteRequest(Collections.singletonList(response.id()));
 
-        webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri(ApiVersion.API_PREFIX + "/files")
+        webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri(RestApiVersion.API_PREFIX + "/files")
                 .body(BodyInserters.fromValue(deleteRequest))
                 .exchange()
                 .expectStatus().isNoContent();
@@ -479,7 +759,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-bb", null);
 
-        UploadResponse folderResponse = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        UploadResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -488,7 +768,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CopyRequest copyRequest = new CopyRequest(Collections.singletonList(response.id()), folderResponse.id(), false);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/files/copy")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/files/copy")
                 .body(BodyInserters.fromValue(copyRequest))
                 .exchange()
                 .expectStatus().is5xxServerError();
@@ -515,7 +795,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         Long originalSize = originalUploadResponse.size();
         Assertions.assertTrue(originalSize != null   && originalSize > 0);
         Map<String, Object> newMetadata = Map.of("owner", "Google", "clientId", "Joe");
-        webTestClient.put().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/replace-metadata")
+        webTestClient.put().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/replace-metadata")
                         .build(id.toString()))
                 .body(BodyInserters.fromValue(newMetadata))
                 .exchange()
@@ -526,7 +806,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .jsonPath("$.id").isEqualTo(id.toString());
 
         DocumentInfo info = webTestClient.get().uri(uri ->
-                        uri.path(ApiVersion.API_PREFIX + "/documents/{id}/info")
+                        uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/info")
                                 .queryParam("withMetadata", true)
                                 .build(id.toString()))
                 .exchange()
@@ -543,7 +823,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         UploadResponse response = uploadDocument(builder);
 
-        webTestClient.get().uri(ApiVersion.API_PREFIX + "/documents/{id}/download", response.id())
+        webTestClient.get().uri(RestApiVersion.API_PREFIX + "/documents/{id}/download", response.id())
                 .exchange()
                 .expectStatus().isOk()
                 .expectHeader().contentType("application/x-sql")
@@ -554,33 +834,33 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     void whenDownloadFolder_thenError() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("whenDownloadFolder_thenError", null);
 
-        FolderResponse folder = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse folder = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
                 .expectBody(FolderResponse.class)
                 .returnResult().getResponseBody();
 
-        webTestClient.get().uri(ApiVersion.API_PREFIX + "/documents/{id}/download", folder.id())
+        webTestClient.get().uri(RestApiVersion.API_PREFIX + "/documents/{id}/download", folder.id())
                 .exchange()
                 .expectStatus().is4xxClientError();
     }
 
     @Test
     void whenDownloadDocument_thenNotFound() {
-        webTestClient.get().uri(ApiVersion.API_PREFIX + "/documents/{id}/download", UUID.randomUUID())
+        webTestClient.get().uri(RestApiVersion.API_PREFIX + "/documents/{id}/download", UUID.randomUUID())
                 .exchange()
                 .expectStatus().isNotFound();
     }
 
     @Test
     void whenDownloadDocumentMultiple_thenError() throws IOException {
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/download-multiple")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/download-multiple")
                 .body(BodyInserters.fromValue(Collections.emptyList()))
                 .exchange()
                 .expectStatus().is4xxClientError();
 
-        Resource zip = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/download-multiple")
+        Resource zip = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/download-multiple")
                 .body(BodyInserters.fromValue(List.of(UUID.randomUUID().toString(), UUID.randomUUID().toString())))
                 .exchange()
                 .expectStatus().isOk()
@@ -599,7 +879,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         ClassPathResource file2 = new ClassPathResource("test.txt");
         builder.part("file", file2);
 
-        List<UploadResponse> uploadResponse = webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload-multiple")
+        List<UploadResponse> uploadResponse = webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/upload-multiple")
                 .queryParam("allowDuplicateFileNames", true)
                 .build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
@@ -613,7 +893,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         UploadResponse uploadResponse1 = uploadResponse.get(0);
         UploadResponse uploadResponse2 = uploadResponse.get(1);
 
-        Resource resource = webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/download-multiple")
+        Resource resource = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/download-multiple")
                 .body(BodyInserters.fromValue(List.of(uploadResponse1.id(), uploadResponse2.id())))
                 .exchange()
                 .expectStatus().isOk()
@@ -679,12 +959,12 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         DeleteRequest deleteRequest = new DeleteRequest(Collections.singletonList(response.id()));
 
-        webTestClient.method(HttpMethod.DELETE).uri(ApiVersion.API_PREFIX + "/files")
+        webTestClient.method(HttpMethod.DELETE).uri(RestApiVersion.API_PREFIX + "/files")
                 .body(BodyInserters.fromValue(deleteRequest))
                 .exchange()
                 .expectStatus().isNoContent();
 
-        webTestClient.get().uri(ApiVersion.API_PREFIX + "/documents/{id}/info", response.id())
+        webTestClient.get().uri(RestApiVersion.API_PREFIX + "/documents/{id}/info", response.id())
                 .exchange()
                 .expectStatus().isNotFound();
     }
@@ -700,13 +980,13 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         DeleteMetadataRequest deleteRequest = new DeleteMetadataRequest(Collections.singletonList("owner"));
 
-        webTestClient.method(HttpMethod.DELETE).uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/metadata").build(uploadResponse.id()))
+        webTestClient.method(HttpMethod.DELETE).uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/metadata").build(uploadResponse.id()))
                 .body(BodyInserters.fromValue(deleteRequest))
                 .exchange()
                 .expectStatus().isNoContent();
 
         DocumentInfo info = webTestClient.get().uri(uri ->
-                        uri.path(ApiVersion.API_PREFIX + "/documents/{id}/info")
+                        uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/info")
                                 .queryParam("withMetadata", true)
                                 .build(uploadResponse.id()))
                 .exchange()
@@ -729,13 +1009,13 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         UpdateMetadataRequest updateMetadataRequest = new UpdateMetadataRequest(Map.of("owner", "Joe", "appId",  "MY_APP_2"));
 
-        webTestClient.method(HttpMethod.PATCH).uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/metadata").build(uploadResponse.id()))
+        webTestClient.method(HttpMethod.PATCH).uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/metadata").build(uploadResponse.id()))
                 .body(BodyInserters.fromValue(updateMetadataRequest))
                 .exchange()
                 .expectStatus().isOk();
 
         DocumentInfo info = webTestClient.get().uri(uri ->
-                        uri.path(ApiVersion.API_PREFIX + "/documents/{id}/info")
+                        uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/info")
                                 .queryParam("withMetadata", true)
                                 .build(uploadResponse.id()))
                 .exchange()
@@ -753,14 +1033,14 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         UpdateMetadataRequest updateMetadataRequest = new UpdateMetadataRequest(Map.of());
 
-        webTestClient.method(HttpMethod.PATCH).uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/metadata").build(UUID.randomUUID().toString()))
+        webTestClient.method(HttpMethod.PATCH).uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/metadata").build(UUID.randomUUID().toString()))
                 .body(BodyInserters.fromValue(updateMetadataRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
 
         DeleteMetadataRequest deleteRequest = new DeleteMetadataRequest(Collections.emptyList());
 
-        webTestClient.method(HttpMethod.DELETE).uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/metadata").build(UUID.randomUUID().toString()))
+        webTestClient.method(HttpMethod.DELETE).uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/metadata").build(UUID.randomUUID().toString()))
                 .body(BodyInserters.fromValue(deleteRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
@@ -778,7 +1058,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-a", null);
 
-        UploadResponse folderResponse = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        UploadResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -787,12 +1067,12 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         MoveRequest moveRequest = new MoveRequest(Collections.singletonList(response.id()), folderResponse.id(), false);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/files/move")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/files/move")
                 .body(BodyInserters.fromValue(moveRequest))
                 .exchange()
                 .expectStatus().isOk();
 
-        webTestClient.get().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/folders/list")
+        webTestClient.get().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/folders/list")
                         .queryParam("folderId", folderResponse.id())
                         .build())
                 .exchange()
@@ -806,7 +1086,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-for-move", null);
 
-        FolderResponse folder = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse folder = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -815,7 +1095,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         createFolderRequest = new CreateFolderRequest("test-folder-for-move", folder.id());
 
-        FolderResponse folder2 = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse folder2 = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -824,28 +1104,28 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         MoveRequest moveRequest = new MoveRequest(Collections.singletonList(folder2.id()), folder.id(), false);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/files/move")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/files/move")
                 .body(BodyInserters.fromValue(moveRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
 
         moveRequest = new MoveRequest(Collections.singletonList(folder.id()), folder2.id(), false);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/files/move")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/files/move")
                 .body(BodyInserters.fromValue(moveRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
 
         moveRequest = new MoveRequest(Collections.singletonList(folder2.id()), folder2.id(), false);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders/move")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders/move")
                 .body(BodyInserters.fromValue(moveRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
 
         moveRequest = new MoveRequest(Collections.singletonList(folder.id()), folder2.id(), false);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders/move")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders/move")
                 .body(BodyInserters.fromValue(moveRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
@@ -856,14 +1136,14 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         moveRequest = new MoveRequest(Collections.singletonList(file.id()), null, false);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/files/move")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/files/move")
                 .body(BodyInserters.fromValue(moveRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
 
         moveRequest = new MoveRequest(Collections.singletonList(file.id()), folder.id(), true);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/files/move")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/files/move")
                 .body(BodyInserters.fromValue(moveRequest))
                 .exchange()
                 .expectStatus().isOk();
@@ -872,14 +1152,14 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         moveRequest = new MoveRequest(Collections.singletonList(file2.id()), folder.id(), false);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/files/move")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/files/move")
                 .body(BodyInserters.fromValue(moveRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
 
         moveRequest = new MoveRequest(Collections.singletonList(file2.id()), folder.id(), true);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/files/move")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/files/move")
                 .body(BodyInserters.fromValue(moveRequest))
                 .exchange()
                 .expectStatus().isOk();
@@ -895,7 +1175,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-b", null);
 
-        UploadResponse folderResponse = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        UploadResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -904,12 +1184,12 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CopyRequest copyRequest = new CopyRequest(Collections.singletonList(response.id()), folderResponse.id(), false);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/files/copy")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/files/copy")
                 .body(BodyInserters.fromValue(copyRequest))
                 .exchange()
                 .expectStatus().isOk();
 
-        webTestClient.get().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/folders/list")
+        webTestClient.get().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/folders/list")
                         .queryParam("folderId", folderResponse.id())
                         .build())
                 .exchange()
@@ -917,20 +1197,20 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .expectBody()
                 .jsonPath("$[0].name").isEqualTo(response.name());
 
-        webTestClient.get().uri(ApiVersion.API_PREFIX + "/documents/{id}/info", response.id())
+        webTestClient.get().uri(RestApiVersion.API_PREFIX + "/documents/{id}/info", response.id())
                 .exchange()
                 .expectStatus().isOk();
 
         copyRequest = new CopyRequest(Collections.singletonList(response.id()), null, false);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/files/copy")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/files/copy")
                 .body(BodyInserters.fromValue(copyRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
 
         copyRequest = new CopyRequest(Collections.singletonList(response.id()), null, true);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/files/copy")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/files/copy")
                 .body(BodyInserters.fromValue(copyRequest))
                 .exchange()
                 .expectStatus().isOk();
@@ -944,7 +1224,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         RenameRequest renameRequest = new RenameRequest("new-name.sql");
 
-        webTestClient.put().uri(ApiVersion.API_PREFIX + "/files/{fileId}/rename", response.id())
+        webTestClient.put().uri(RestApiVersion.API_PREFIX + "/files/{fileId}/rename", response.id())
                 .body(BodyInserters.fromValue(renameRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -953,7 +1233,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         renameRequest = new RenameRequest("new-name.sql");
 
-        webTestClient.put().uri(ApiVersion.API_PREFIX + "/files/{fileId}/rename", response.id())
+        webTestClient.put().uri(RestApiVersion.API_PREFIX + "/files/{fileId}/rename", response.id())
                 .body(BodyInserters.fromValue(renameRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
@@ -971,16 +1251,16 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         DeleteRequest deleteRequest = new DeleteRequest(List.of(response.id(), response2.id()));
 
-        webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri(ApiVersion.API_PREFIX + "/files")
+        webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri(RestApiVersion.API_PREFIX + "/files")
                 .body(BodyInserters.fromValue(deleteRequest))
                 .exchange()
                 .expectStatus().isNoContent();
 
-        webTestClient.get().uri(ApiVersion.API_PREFIX + "/documents/{id}/info", response.id())
+        webTestClient.get().uri(RestApiVersion.API_PREFIX + "/documents/{id}/info", response.id())
                 .exchange()
                 .expectStatus().isNotFound();
 
-        webTestClient.get().uri(ApiVersion.API_PREFIX + "/documents/{id}/info", response2.id())
+        webTestClient.get().uri(RestApiVersion.API_PREFIX + "/documents/{id}/info", response2.id())
                 .exchange()
                 .expectStatus().isNotFound();
     }
@@ -990,7 +1270,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     void whenCreateFolder_thenOk() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder", null);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1002,14 +1282,14 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     void whenCreateFolder_thenError() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test/folder", null);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
 
         createFolderRequest = new CreateFolderRequest("test", UUID.randomUUID());
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isNotFound();
@@ -1019,7 +1299,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     void whenMoveFolder_thenOk() {
         CreateFolderRequest createFolderRequest1 = new CreateFolderRequest("test-folder-1", null);
 
-        FolderResponse folderResponse1 = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse folderResponse1 = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest1))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1028,7 +1308,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CreateFolderRequest createFolderRequest2 = new CreateFolderRequest("test-folder-2", null);
 
-        FolderResponse folderResponse2 = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse folderResponse2 = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest2))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1037,12 +1317,12 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         MoveRequest moveRequest = new MoveRequest(Collections.singletonList(folderResponse1.id()), folderResponse2.id(), false);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders/move")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders/move")
                 .body(BodyInserters.fromValue(moveRequest))
                 .exchange()
                 .expectStatus().isOk();
 
-        webTestClient.get().uri(ApiVersion.API_PREFIX + "/folders/list?folderId={id}", folderResponse2.id())
+        webTestClient.get().uri(RestApiVersion.API_PREFIX + "/folders/list?folderId={id}", folderResponse2.id())
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
@@ -1053,7 +1333,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     void whenCopyFolder_thenOk() {
         CreateFolderRequest createFolderRequest1 = new CreateFolderRequest("test-folder-to-copy", null);
 
-        FolderResponse folderResponse1 = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse folderResponse1 = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest1))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1062,7 +1342,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CreateFolderRequest createFolderRequest2 = new CreateFolderRequest("target-folder", null);
 
-        FolderResponse folderResponse2 = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse folderResponse2 = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest2))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1071,18 +1351,18 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CopyRequest copyRequest = new CopyRequest(Collections.singletonList(folderResponse1.id()), folderResponse2.id(), false);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders/copy")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders/copy")
                 .body(BodyInserters.fromValue(copyRequest))
                 .exchange()
                 .expectStatus().isOk();
 
-        webTestClient.get().uri(ApiVersion.API_PREFIX + "/folders/list?folderId={id}", folderResponse2.id())
+        webTestClient.get().uri(RestApiVersion.API_PREFIX + "/folders/list?folderId={id}", folderResponse2.id())
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$[0].name").isEqualTo(folderResponse1.name());
 
-        webTestClient.get().uri(ApiVersion.API_PREFIX + "/folders/list?folderId={id}", folderResponse1.id())
+        webTestClient.get().uri(RestApiVersion.API_PREFIX + "/folders/list?folderId={id}", folderResponse1.id())
                 .exchange()
                 .expectStatus().isOk();
     }
@@ -1091,7 +1371,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     void whenCopyFolderRecursive_thenOk() {
         CreateFolderRequest createSourceFolderRequest = new CreateFolderRequest("test-folder-source", null);
 
-        FolderResponse sourceFolderResponse = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse sourceFolderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createSourceFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1100,7 +1380,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CreateFolderRequest createSourceSubFolderRequest = new CreateFolderRequest("test-subfolder-source", sourceFolderResponse.id());
 
-        FolderResponse sourceSubFolderResponse = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse sourceSubFolderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createSourceSubFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1110,7 +1390,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         MultipartBodyBuilder builder = newFileBuilder();
         builder.part("parentFolderId", sourceFolderResponse.id().toString());
 
-        UploadResponse sourceRootFile = webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload")
+        UploadResponse sourceRootFile = webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/upload")
                         .build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()))
@@ -1123,7 +1403,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         builder.part("file", new ClassPathResource("test.txt"));
         builder.part("parentFolderId", sourceSubFolderResponse.id().toString());
 
-        UploadResponse sourceSubFolderFile = webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload")
+        UploadResponse sourceSubFolderFile = webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/upload")
                         .build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()))
@@ -1134,7 +1414,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CreateFolderRequest createFolderRequest2 = new CreateFolderRequest("test-folder-target", null);
 
-        FolderResponse folderResponse2 = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse folderResponse2 = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest2))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1143,12 +1423,12 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CopyRequest copyRequest = new CopyRequest(Collections.singletonList(sourceFolderResponse.id()), folderResponse2.id(), false);
 
-        webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders/copy")
+        webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders/copy")
                 .body(BodyInserters.fromValue(copyRequest))
                 .exchange()
                 .expectStatus().isOk();
 
-        List<FolderElementInfo> targetFolderInfoList = webTestClient.get().uri(ApiVersion.API_PREFIX + "/folders/list?folderId={id}", folderResponse2.id())
+        List<FolderElementInfo> targetFolderInfoList = webTestClient.get().uri(RestApiVersion.API_PREFIX + "/folders/list?folderId={id}", folderResponse2.id())
                 .exchange()
                 .expectStatus().isOk()
                 .expectBodyList(FolderElementInfo.class)
@@ -1160,7 +1440,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         FolderElementInfo targetFolderRoot = targetFolderInfoList.stream().filter(resp -> resp.type().equals(DocumentType.FOLDER) && resp.name().equals("test-folder-source")).findAny().get();
 
-        List<FolderElementInfo> targetFolderRootInfoList = webTestClient.get().uri(ApiVersion.API_PREFIX + "/folders/list?folderId={id}", targetFolderRoot.id())
+        List<FolderElementInfo> targetFolderRootInfoList = webTestClient.get().uri(RestApiVersion.API_PREFIX + "/folders/list?folderId={id}", targetFolderRoot.id())
                 .exchange()
                 .expectStatus().isOk()
                 .expectBodyList(FolderElementInfo.class)
@@ -1173,7 +1453,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         FolderElementInfo subFolderInfo = targetFolderRootInfoList.stream().filter(resp -> resp.type().equals(DocumentType.FOLDER) && resp.name().equals("test-subfolder-source")).findAny().get();
 
-        List<FolderElementInfo> targetSubFolderInfoList = webTestClient.get().uri(ApiVersion.API_PREFIX + "/folders/list?folderId={id}", subFolderInfo.id())
+        List<FolderElementInfo> targetSubFolderInfoList = webTestClient.get().uri(RestApiVersion.API_PREFIX + "/folders/list?folderId={id}", subFolderInfo.id())
                 .exchange()
                 .expectStatus().isOk()
                 .expectBodyList(FolderElementInfo.class)
@@ -1188,7 +1468,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     void whenDeleteFolderRecursive_thenOk() {
         CreateFolderRequest createSourceFolderRequest = new CreateFolderRequest("test-delete-folder-source", null);
 
-        FolderResponse sourceFolderResponse = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse sourceFolderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createSourceFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1197,7 +1477,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CreateFolderRequest createSourceSubFolderRequest = new CreateFolderRequest("test-delete-subfolder-source", sourceFolderResponse.id());
 
-        FolderResponse sourceSubFolderResponse = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse sourceSubFolderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createSourceSubFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1207,7 +1487,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         MultipartBodyBuilder builder = newFileBuilder();
         builder.part("parentFolderId", sourceFolderResponse.id().toString());
 
-        UploadResponse sourceRootFile = webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload")
+        UploadResponse sourceRootFile = webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/upload")
                         .build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()))
@@ -1220,7 +1500,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         builder.part("file", new ClassPathResource("test.txt"));
         builder.part("parentFolderId", sourceSubFolderResponse.id().toString());
 
-        UploadResponse sourceSubFolderFile = webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload")
+        UploadResponse sourceSubFolderFile = webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/upload")
                         .build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()))
@@ -1231,27 +1511,27 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         DeleteRequest deleteRequest = new DeleteRequest(Collections.singletonList(sourceFolderResponse.id()));
 
-        webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri(ApiVersion.API_PREFIX + "/folders")
+        webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(deleteRequest))
                 .exchange()
                 .expectStatus().isNoContent();
 
-        webTestClient.get().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/info")
+        webTestClient.get().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/info")
                         .build(sourceFolderResponse.id()))
                 .exchange()
                 .expectStatus().isNotFound();
 
-        webTestClient.get().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/info")
+        webTestClient.get().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/info")
                         .build(sourceSubFolderResponse.id()))
                 .exchange()
                 .expectStatus().isNotFound();
 
-        webTestClient.get().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/info")
+        webTestClient.get().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/info")
                         .build(sourceRootFile.id()))
                 .exchange()
                 .expectStatus().isNotFound();
 
-        webTestClient.get().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/info")
+        webTestClient.get().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/info")
                         .build(sourceSubFolderFile.id()))
                 .exchange()
                 .expectStatus().isNotFound();
@@ -1262,7 +1542,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     void whenRenameFolder_thenOk() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("folder-to-rename", null);
 
-        FolderResponse folderResponse = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1271,7 +1551,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         RenameRequest renameRequest = new RenameRequest("renamed-folder");
 
-        webTestClient.put().uri(ApiVersion.API_PREFIX + "/folders/{folderId}/rename", folderResponse.id())
+        webTestClient.put().uri(RestApiVersion.API_PREFIX + "/folders/{folderId}/rename", folderResponse.id())
                 .body(BodyInserters.fromValue(renameRequest))
                 .exchange()
                 .expectStatus().isOk()
@@ -1280,7 +1560,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         renameRequest = new RenameRequest("renamed-folder");
 
-        webTestClient.put().uri(ApiVersion.API_PREFIX + "/folders/{folderId}/rename", folderResponse.id())
+        webTestClient.put().uri(RestApiVersion.API_PREFIX + "/folders/{folderId}/rename", folderResponse.id())
                 .body(BodyInserters.fromValue(renameRequest))
                 .exchange()
                 .expectStatus().is4xxClientError();
@@ -1290,7 +1570,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     void whenDeleteFolder_thenOk() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("folder-to-delete", null);
 
-        FolderResponse folderResponse = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1299,12 +1579,12 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         DeleteRequest deleteRequest = new DeleteRequest(Collections.singletonList(folderResponse.id()));
 
-        webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri(ApiVersion.API_PREFIX + "/folders")
+        webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(deleteRequest))
                 .exchange()
                 .expectStatus().isNoContent();
 
-        webTestClient.get().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/folders/list")
+        webTestClient.get().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/folders/list")
                         .queryParam("folderId", folderResponse.id())
                         .build())
                 .exchange()
@@ -1315,7 +1595,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     void whenListFolder_thenOk() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("folder-to-list", null);
 
-        FolderResponse folderResponse = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1324,7 +1604,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         Assertions.assertEquals("folder-to-list", folderResponse.name());
 
-        List<FolderResponse> folders = webTestClient.get().uri(ApiVersion.API_PREFIX + "/folders/list")
+        List<FolderResponse> folders = webTestClient.get().uri(RestApiVersion.API_PREFIX + "/folders/list")
                 .exchange()
                 .expectStatus().isOk()
                 .expectBodyList(FolderResponse.class)
@@ -1337,7 +1617,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     @Test
     void whenListFolder_thenError() {
         webTestClient.get()
-                .uri(uri -> uri.path(ApiVersion.API_PREFIX + "/folders/list")
+                .uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/folders/list")
                     .queryParam("onlyFiles", true)
                     .queryParam("onlyFolders", true)
                     .build())
@@ -1345,21 +1625,21 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .expectStatus().is4xxClientError();
 
         webTestClient.get()
-                .uri(uri -> uri.path(ApiVersion.API_PREFIX + "/folders/list")
+                .uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/folders/list")
                         .queryParam("onlyFiles", true)
                         .build())
                 .exchange()
                 .expectStatus().isOk();
 
         webTestClient.get()
-                .uri(uri -> uri.path(ApiVersion.API_PREFIX + "/folders/list")
+                .uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/folders/list")
                         .queryParam("onlyFolders", true)
                         .build())
                 .exchange()
                 .expectStatus().isOk();
 
         webTestClient.get()
-                .uri(uri -> uri.path(ApiVersion.API_PREFIX + "/folders/list")
+                .uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/folders/list")
                         .queryParam("folderId", UUID.randomUUID().toString())
                         .build())
                 .exchange()
@@ -1377,7 +1657,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         Assertions.assertNotNull(uploadResponse);
 
-        List<AuditLog> auditTrail = webTestClient.post().uri(ApiVersion.API_PREFIX + "/audit/search")
+        List<AuditLog> auditTrail = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/audit/search")
                 .body(BodyInserters.fromValue(new SearchByAuditLogRequest(null, null, null, null, Map.of("metadata", Map.of("appId", appId)))))
                 .exchange()
                 .expectStatus().isOk()
@@ -1387,7 +1667,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         Assertions.assertNotNull(auditTrail);
         Assertions.assertEquals(1, auditTrail.size());
 
-        auditTrail = webTestClient.post().uri(ApiVersion.API_PREFIX + "/audit/search")
+        auditTrail = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/audit/search")
                 .body(BodyInserters.fromValue(new SearchByAuditLogRequest(null, null, null, null, Map.of("metadata", Map.of("owner", "OpenFilz")))))
                 .exchange()
                 .expectStatus().isOk()
@@ -1397,7 +1677,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         Assertions.assertNotNull(auditTrail);
         Assertions.assertTrue(!auditTrail.isEmpty());
 
-        auditTrail = webTestClient.post().uri(ApiVersion.API_PREFIX + "/audit/search")
+        auditTrail = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/audit/search")
                 .body(BodyInserters.fromValue(new SearchByAuditLogRequest(null, null, null, null, Map.of("filename", "schema.sql"))))
                 .exchange()
                 .expectStatus().isOk()
@@ -1407,7 +1687,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         Assertions.assertNotNull(auditTrail);
         Assertions.assertTrue(!auditTrail.isEmpty());
 
-        auditTrail = webTestClient.post().uri(ApiVersion.API_PREFIX + "/audit/search")
+        auditTrail = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/audit/search")
                 .body(BodyInserters.fromValue(new SearchByAuditLogRequest(null, uploadResponse.id(), null, UPLOAD_DOCUMENT, null)))
                 .exchange()
                 .expectStatus().isOk()
@@ -1419,14 +1699,14 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         RenameRequest renameRequest = new RenameRequest("new-name-for-search_audit.sql");
 
-        webTestClient.put().uri(ApiVersion.API_PREFIX + "/files/{fileId}/rename", uploadResponse.id())
+        webTestClient.put().uri(RestApiVersion.API_PREFIX + "/files/{fileId}/rename", uploadResponse.id())
                 .body(BodyInserters.fromValue(renameRequest))
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.name").isEqualTo("new-name-for-search_audit.sql");
 
-        auditTrail = webTestClient.post().uri(ApiVersion.API_PREFIX + "/audit/search")
+        auditTrail = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/audit/search")
                 .body(BodyInserters.fromValue(new SearchByAuditLogRequest("anonymousUser", uploadResponse.id(), DocumentType.FILE, null, null)))
                 .exchange()
                 .expectStatus().isOk()
@@ -1442,7 +1722,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     void whenGetAuditTrail_thenOK() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("folder-to-delete-for-audit", null);
 
-        FolderResponse folderResponse = webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        FolderResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
@@ -1451,13 +1731,13 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         DeleteRequest deleteRequest = new DeleteRequest(Collections.singletonList(folderResponse.id()));
 
-        webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri(ApiVersion.API_PREFIX + "/folders")
+        webTestClient.method(org.springframework.http.HttpMethod.DELETE).uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(deleteRequest))
                 .exchange()
                 .expectStatus().isNoContent();
 
 
-        List<AuditLog> auditTrail = webTestClient.get().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/audit/{id}")
+        List<AuditLog> auditTrail = webTestClient.get().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/audit/{id}")
                         .build(folderResponse.id()))
                 .exchange()
                 .expectStatus().isOk()
@@ -1469,7 +1749,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         Assertions.assertEquals(DELETE_FOLDER, auditTrail.get(0).action());;
         Assertions.assertEquals(CREATE_FOLDER, auditTrail.get(1).action());
 
-        auditTrail = webTestClient.get().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/audit/{id}").queryParam("sort", SortOrder.ASC.name())
+        auditTrail = webTestClient.get().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/audit/{id}").queryParam("sort", SortOrder.ASC.name())
                         .build(folderResponse.id()))
                 .exchange()
                 .expectStatus().isOk()

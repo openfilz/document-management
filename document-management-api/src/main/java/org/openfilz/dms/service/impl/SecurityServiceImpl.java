@@ -1,6 +1,7 @@
 package org.openfilz.dms.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.openfilz.dms.config.RestApiVersion;
 import org.openfilz.dms.enums.Role;
 import org.openfilz.dms.enums.RoleTokenLookup;
 import org.springframework.http.HttpMethod;
@@ -24,10 +25,17 @@ public class SecurityServiceImpl extends AbstractSecurityService {
 
     private final String rootGroupName;
 
+    private final String graphQlBaseUrl;
+
     public boolean authorize(Authentication auth, AuthorizationContext context) {
         ServerHttpRequest request = context.getExchange().getRequest();
         HttpMethod method = request.getMethod();
-        String path = getPath(request);
+        String path = request.getPath().value();
+        int i = path.indexOf(RestApiVersion.API_PREFIX);
+        if(i < 0) {
+            return isGraphQlSearch(graphQlBaseUrl, path) && isAuthorized((JwtAuthenticationToken) auth, Role.READER, Role.CONTRIBUTOR);
+        }
+        path = path.substring(i + RestApiVersion.API_PREFIX.length());
         if (isQueryOrSearch(method, path))
             return isAuthorized((JwtAuthenticationToken) auth, Role.READER, Role.CONTRIBUTOR);
         if(isAudit(path)) {

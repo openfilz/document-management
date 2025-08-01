@@ -1,0 +1,67 @@
+<div class="app-layout">
+  <app-sidebar (navigationClick)="onSidebarNavigation($event)"></app-sidebar>
+  
+  <app-header
+    [currentPath]="getCurrentPath()"
+    [hasSelection]="hasSelectedItems"
+    [selectedCount]="selectedItems.length"
+    (uploadFiles)="onUploadFiles()"
+    (createFolder)="onCreateFolder()"
+    (search)="onSearch($event)"
+    (viewModeChange)="onViewModeChange($event)"
+    (downloadSelected)="onDownloadSelected()"
+    (deleteSelected)="onDeleteSelected()">
+  </app-header>
+
+  <div class="main-content">
+    @if(!loading) {
+        @if(showUploadZone) {
+            <app-upload-zone
+                    (filesSelected)="onFilesSelected($event)">
+            </app-upload-zone>
+        }
+        @if(!showUploadZone && items.length === 0) {
+            <div class="empty-state">
+                <div class="empty-content">
+                    <mat-icon class="empty-icon">folder_open</mat-icon>
+                    <h3>This folder is empty</h3>
+                    <p>Upload files or create a new folder to get started</p>
+                </div>
+            </div>
+        }
+        @if(viewMode === 'grid' && items.length > 0) {
+            <app-file-grid
+                    [items]="items"
+                    (itemClick)="onItemClick($event)"
+                    (itemDoubleClick)="onItemDoubleClick($event)"
+                    (selectionChange)="onSelectionChange($event)"
+                    (rename)="onRenameItem($event)"
+                    (download)="onDownloadItem($event)"
+                    (move)="onMoveItem($event)"
+                    (copy)="onCopyItem($event)"
+                    (delete)="onDeleteItem($event)">
+            </app-file-grid>
+        }
+        @if(viewMode === 'list' && items.length > 0) {
+            <app-file-list
+                    [items]="items"
+                    (itemClick)="onItemClick($event)"
+                    (itemDoubleClick)="onItemDoubleClick($event)"
+                    (selectionChange)="onSelectionChange($event)"
+                    (selectAll)="onSelectAll($event)"
+                    (rename)="onRenameItem($event)"
+                    (download)="onDownloadItem($event)"
+                    (move)="onMoveItem($event)"
+                    (copy)="onCopyItem($event)"
+                    (delete)="onDeleteItem($event)">
+            </app-file-list>
+        }
+    }
+    @else {
+        <div class="loading-container">
+            <mat-spinner></mat-spinner>
+            <p>Loading...</p>
+        </div>
+    }
+  </div>
+</div>

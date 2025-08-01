@@ -55,7 +55,7 @@ public class AuditDAOImpl implements AuditDAO {
 
     @Override
     public Flux<AuditLog> searchAuditTrail(SearchByAuditLogRequest request) {
-        StringBuilder sql = new StringBuilder("SELECT resource_id, timestamp, user_principal, action, resource_type, details FROM audit_logs WHERE ");
+        StringBuilder sql = new StringBuilder("SELECT resource_id, timestamp, user_principal, action, resource_type, details FROM audit_logs");
         boolean first = true;
         boolean idCriteria = request.id() != null;
         if(idCriteria) {

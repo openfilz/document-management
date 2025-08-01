@@ -15,8 +15,6 @@ import java.util.UUID;
 
 public interface DocumentRepository extends ReactiveCrudRepository<Document, UUID> {
 
-    //Flux<Document> findByParentId(UUID parentId);
-
     Mono<Boolean> existsByNameAndParentId(String name, UUID parentId);
 
     Mono<Boolean> existsByNameAndParentIdIsNull(String name);

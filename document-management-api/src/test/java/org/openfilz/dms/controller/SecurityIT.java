@@ -6,12 +6,16 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.openfilz.dms.config.ApiVersion;
+import org.openfilz.dms.config.RestApiVersion;
 import org.openfilz.dms.dto.request.*;
 import org.openfilz.dms.dto.response.UploadResponse;
+import org.openfilz.dms.enums.SortOrder;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.graphql.client.ClientGraphQlResponse;
+import org.springframework.graphql.client.GraphQlTransportException;
+import org.springframework.graphql.client.HttpGraphQlClient;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -22,8 +26,11 @@ import org.springframework.test.context.TestConstructor;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -31,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.context.TestConstructor.AutowireMode.ALL;
 
 @Testcontainers
@@ -48,8 +56,8 @@ public class SecurityIT extends TestContainersBaseConfig {
     private static String contributorAccessToken;
     private static String adminAccessToken;
 
-    public SecurityIT(WebTestClient webTestClient, ObjectMapper objectMapper) {
-        super(webTestClient, objectMapper);
+    public SecurityIT(WebTestClient webTestClient) {
+        super(webTestClient);
     }
 
     @DynamicPropertySource
@@ -94,7 +102,97 @@ public class SecurityIT extends TestContainersBaseConfig {
                 .block();
     }
 
+    protected HttpGraphQlClient newGraphQlClient(String authToken) {
+        return newGraphQlClient().mutate().header(HttpHeaders.AUTHORIZATION, "Bearer " + authToken).build();
+    }
 
+    @Test
+    void testGraphQl_ListFolders() {
+
+        ListFolderRequest request = new ListFolderRequest(null, null, null, null, null, null, null, null, null, null, null, null
+                , null, new PageCriteria("name", SortOrder.ASC, 1, 100));
+        var graphQlRequest = """
+                query listFolder($request:ListFolderRequest) {
+                    listFolder(request:$request) {
+                      id
+                      contentType
+                      type
+                      name
+                      metadata
+                    }
+                }
+                """.trim();
+
+        Mono<ClientGraphQlResponse> response = newGraphQlClient()
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+
+        StepVerifier.create(response)
+                .expectErrorSatisfies(error -> {
+                    assertThat(error).isInstanceOf(GraphQlTransportException.class);
+                    assertThat(((WebClientResponseException) error.getCause()).getStatusCode().value()).isEqualTo(401);
+                })
+                .verify();
+
+        response = newGraphQlClient(noaccessAccessToken)
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+
+        StepVerifier.create(response)
+                .expectErrorSatisfies(error -> {
+                    assertThat(error).isInstanceOf(GraphQlTransportException.class);
+                    assertThat(((WebClientResponseException) error.getCause()).getStatusCode().value()).isEqualTo(403);
+                })
+                .verify();
+
+        response = newGraphQlClient(auditAccessToken)
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+
+        StepVerifier.create(response)
+                .expectErrorSatisfies(error -> {
+                    assertThat(error).isInstanceOf(GraphQlTransportException.class);
+                    assertThat(((WebClientResponseException) error.getCause()).getStatusCode().value()).isEqualTo(403);
+                })
+                .verify();
+
+        response = newGraphQlClient(readerAccessToken)
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+
+        StepVerifier.create(response)
+                .expectNextCount(1)
+                .verifyComplete();
+
+        response = newGraphQlClient(contributorAccessToken)
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+
+        StepVerifier.create(response)
+                .expectNextCount(1)
+                .verifyComplete();
+
+        response = newGraphQlClient(adminAccessToken)
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+
+        StepVerifier.create(response)
+                .expectNextCount(1)
+                .verifyComplete();
+
+    }
 
     @Test
     void testUpload() {
@@ -345,76 +443,76 @@ public class SecurityIT extends TestContainersBaseConfig {
     }
 
     private WebTestClient.@NotNull RequestHeadersSpec<?> getListFolderRequest(UploadResponse folder) {
-        return webTestClient.get().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/folders/list").queryParam("folderId", folder.id()).build());
+        return webTestClient.get().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/folders/list").queryParam("folderId", folder.id()).build());
     }
 
     private WebTestClient.RequestHeadersSpec<?> getDeleteFolderRequest(UploadResponse folder) {
         DeleteRequest deleteRequest = new DeleteRequest(Collections.singletonList(folder.id()));
 
-        return webTestClient.method(HttpMethod.DELETE).uri(ApiVersion.API_PREFIX + "/folders")
+        return webTestClient.method(HttpMethod.DELETE).uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(deleteRequest));
     }
 
     private WebTestClient.RequestHeadersSpec<?> getRenameFolderRequest(UploadResponse folder) {
         RenameRequest renameRequest = new RenameRequest("renamed-folder-" + UUID.randomUUID());
 
-        return webTestClient.put().uri(ApiVersion.API_PREFIX + "/folders/{folderId}/rename", folder.id())
+        return webTestClient.put().uri(RestApiVersion.API_PREFIX + "/folders/{folderId}/rename", folder.id())
                 .body(BodyInserters.fromValue(renameRequest));
     }
 
     private WebTestClient.RequestHeadersSpec<?> getCopyFolderRequest(UploadResponse folder1, UploadResponse folder2) {
         CopyRequest copyRequest = new CopyRequest(Collections.singletonList(folder1.id()), folder2.id(), false);
 
-        return webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders/copy")
+        return webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders/copy")
                 .body(BodyInserters.fromValue(copyRequest));
     }
 
     private WebTestClient.RequestHeadersSpec<?> getMoveFolderRequest(UploadResponse folder1, UploadResponse folder2) {
         MoveRequest moveRequest = new MoveRequest(Collections.singletonList(folder1.id()), folder2.id(), false);
 
-        return webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders/move")
+        return webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders/move")
                 .body(BodyInserters.fromValue(moveRequest));
     }
 
     private WebTestClient.RequestHeadersSpec<?> getCreateFolderRequest() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder" + UUID.randomUUID(), null);
 
-        return webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders")
+        return webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest));
     }
 
     private WebTestClient.RequestHeadersSpec<?> getDeleteFileRequest(UploadResponse uploadResponse) {
         DeleteRequest deleteRequest = new DeleteRequest(List.of(uploadResponse.id()));
 
-        return webTestClient.method(HttpMethod.DELETE).uri(ApiVersion.API_PREFIX + "/files")
+        return webTestClient.method(HttpMethod.DELETE).uri(RestApiVersion.API_PREFIX + "/files")
                 .body(BodyInserters.fromValue(deleteRequest));
     }
 
     private WebTestClient.RequestHeadersSpec<?> getRenameFileRequest(UploadResponse uploadResponse) {
         RenameRequest renameRequest = new RenameRequest("new-name" + UUID.randomUUID() + ".sql");
 
-        return webTestClient.put().uri(ApiVersion.API_PREFIX + "/files/{fileId}/rename", uploadResponse.id())
+        return webTestClient.put().uri(RestApiVersion.API_PREFIX + "/files/{fileId}/rename", uploadResponse.id())
                 .body(BodyInserters.fromValue(renameRequest));
     }
 
     private WebTestClient.RequestHeadersSpec<?> getCopyRequest(UploadResponse uploadResponse, UploadResponse folder) {
         CopyRequest copyRequest = new CopyRequest(Collections.singletonList(uploadResponse.id()), folder.id(), false);
 
-        return webTestClient.post().uri(ApiVersion.API_PREFIX + "/files/copy")
+        return webTestClient.post().uri(RestApiVersion.API_PREFIX + "/files/copy")
                 .body(BodyInserters.fromValue(copyRequest));
     }
 
     private WebTestClient.RequestHeadersSpec<?> getMoveFileRequest(UploadResponse uploadResponse, UploadResponse folder) {
         MoveRequest moveRequest = new MoveRequest(Collections.singletonList(uploadResponse.id()), folder.id(), false);
 
-        return webTestClient.post().uri(ApiVersion.API_PREFIX + "/files/move")
+        return webTestClient.post().uri(RestApiVersion.API_PREFIX + "/files/move")
                 .body(BodyInserters.fromValue(moveRequest));
     }
 
     private UploadResponse createFolder() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-" + UUID.randomUUID(), null);
 
-        return addAuthorization(webTestClient.post().uri(ApiVersion.API_PREFIX + "/folders").body(BodyInserters.fromValue(createFolderRequest)), contributorAccessToken)
+        return addAuthorization(webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders").body(BodyInserters.fromValue(createFolderRequest)), contributorAccessToken)
                 .exchange()
                 .expectStatus().isCreated()
                 .expectBody(UploadResponse.class)
@@ -422,14 +520,14 @@ public class SecurityIT extends TestContainersBaseConfig {
     }
 
     private WebTestClient.RequestHeadersSpec<?> getDocumentInfoRequest(UploadResponse uploadResponse) {
-        return webTestClient.get().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/info")
+        return webTestClient.get().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/info")
                 .build(uploadResponse.id()));
     }
 
     private WebTestClient.RequestBodySpec getSearchMetadataRequest(UploadResponse uploadResponse) {
         Assertions.assertNotNull(uploadResponse);
 
-        return webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/search/metadata")
+        return webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/search/metadata")
                 .build(uploadResponse.id()));
     }
 
@@ -438,7 +536,7 @@ public class SecurityIT extends TestContainersBaseConfig {
 
         SearchByMetadataRequest searchByMetadataRequest = new SearchByMetadataRequest(null, null, null, null, Map.of("appId", uuid.toString()));
 
-        return webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
+        return webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/search/ids-by-metadata")
                 .body(BodyInserters.fromValue(searchByMetadataRequest));
     }
 
@@ -466,12 +564,12 @@ public class SecurityIT extends TestContainersBaseConfig {
     }
 
     private WebTestClient.RequestHeadersSpec<?> getDownloadMultipleRequest(UploadResponse uploadResponse1, UploadResponse uploadResponse2) {
-        return webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/download-multiple")
+        return webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/download-multiple")
                 .body(BodyInserters.fromValue(List.of(uploadResponse1.id(), uploadResponse2.id())));
     }
 
     private WebTestClient.RequestHeadersSpec<?> getDownloadRequest(UploadResponse uploadResponse) {
-        return webTestClient.get().uri(ApiVersion.API_PREFIX + "/documents/{id}/download", uploadResponse.id());
+        return webTestClient.get().uri(RestApiVersion.API_PREFIX + "/documents/{id}/download", uploadResponse.id());
     }
 
 
@@ -480,7 +578,7 @@ public class SecurityIT extends TestContainersBaseConfig {
 
         DeleteMetadataRequest deleteRequest = new DeleteMetadataRequest(Collections.singletonList("owner"));
 
-        return webTestClient.method(HttpMethod.DELETE).uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/metadata").build(uploadResponse.id()))
+        return webTestClient.method(HttpMethod.DELETE).uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/metadata").build(uploadResponse.id()))
                 .body(BodyInserters.fromValue(deleteRequest));
     }
 
@@ -489,7 +587,7 @@ public class SecurityIT extends TestContainersBaseConfig {
 
         UpdateMetadataRequest updateMetadataRequest = new UpdateMetadataRequest(Map.of("owner", "Joe", "appId",  "MY_APP_2"));
 
-        return webTestClient.method(HttpMethod.PATCH).uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/metadata").build(uploadResponse.id()))
+        return webTestClient.method(HttpMethod.PATCH).uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/metadata").build(uploadResponse.id()))
                 .body(BodyInserters.fromValue(updateMetadataRequest));
     }
 
@@ -499,7 +597,7 @@ public class SecurityIT extends TestContainersBaseConfig {
         Long originalSize = originalUploadResponse.size();
         Assertions.assertTrue(originalSize != null   && originalSize > 0);
         Map<String, Object> newMetadata = Map.of("owner", "Google", "clientId", "Joe");
-        return webTestClient.put().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/replace-metadata")
+        return webTestClient.put().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/replace-metadata")
                         .build(id.toString()))
                 .body(BodyInserters.fromValue(newMetadata));
     }
@@ -510,7 +608,7 @@ public class SecurityIT extends TestContainersBaseConfig {
         Assertions.assertTrue(originalSize != null   && originalSize > 0);
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part("file", new ClassPathResource("test.txt"));
-        return webTestClient.put().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/{id}/replace-content")
+        return webTestClient.put().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/{id}/replace-content")
                         .build(id.toString()))
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()));
