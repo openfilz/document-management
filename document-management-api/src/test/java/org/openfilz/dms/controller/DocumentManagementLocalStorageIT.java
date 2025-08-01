@@ -196,10 +196,10 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 "tes",
                 Map.of("testId", uuid0.toString()),
                 75L,
-                OffsetDateTime.now().minusHours(1L),
+                OffsetDateTime.now().minusDays(1L),
                 null, //OffsetDateTime.now().plusHours(1L),
                 null, //OffsetDateTime.now().minusHours(1L),
-                OffsetDateTime.now().plusHours(1L),
+                OffsetDateTime.now().plusDays(1L),
                 "anonymousUser"
                 , "anonymousUser",
                 new PageCriteria(null, null, 1, 100));
@@ -239,10 +239,10 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 null,
                 Map.of("testId", uuid0.toString()),
                 75L,
-                OffsetDateTime.now().minusHours(1L),
-                OffsetDateTime.now().plusHours(1L),
-                OffsetDateTime.now().minusHours(1L),
-                OffsetDateTime.now().plusHours(1L),
+                OffsetDateTime.now().minusDays(1L),
+                OffsetDateTime.now().plusDays(1L),
+                OffsetDateTime.now().minusDays(1L),
+                OffsetDateTime.now().plusDays(1L),
                 "anonymousUser"
                 , "anonymousUser",
                 new PageCriteria(null, null, 1, 100));
