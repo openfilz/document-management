@@ -122,6 +122,160 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     }
 
     @Test
+    void whenListFolderEmptyGraphQl_thenOK() {
+        UUID uuid0 = UUID.randomUUID();
+        ListFolderRequest request = new ListFolderRequest(null, DocumentType.FOLDER, null, null, null, Map.of("testId", uuid0.toString()), null, null, null, null, null, null
+                , null, new PageCriteria(null, null, 1, 100));
+        String graphQlRequest = """
+                query listFolder($request:ListFolderRequest) {
+                    listFolder(request:$request) {
+                      id
+                      contentType
+                      type
+                      name
+                      metadata
+                      size
+                      createdAt
+                      updatedAt
+                      createdBy
+                      updatedBy
+                    }
+                }
+                """.trim();
+        HttpGraphQlClient httpGraphQlClient = getGraphQlHttpClient();
+        Mono<ClientGraphQlResponse> response = httpGraphQlClient
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+        StepVerifier.create(response)
+                .expectNextMatches(doc -> checkListFoldersReturnedSize(doc, 0))
+                .expectComplete()
+                .verify();
+    }
+
+    @Test
+    void whenListNewFolderGraphQl_thenOK() {
+        CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-graphQl", null);
+
+        UploadResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
+                .body(BodyInserters.fromValue(createFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+
+        MultipartBodyBuilder builder = newFileBuilder("schema.sql", "test.txt");
+
+        UUID uuid0 = UUID.randomUUID();
+
+        UUID uuid1 = UUID.randomUUID();
+        Map<String, Object> metadata1 = Map.of("testId", uuid0.toString(), "appId", uuid1.toString());
+
+        UUID uuid2 = UUID.randomUUID();
+        Map<String, Object> metadata2 = Map.of("testId", uuid0.toString(), "appId", uuid2.toString());
+
+        MultipleUploadFileParameter param1 = new MultipleUploadFileParameter("schema.sql", new MultipleUploadFileParameterAttributes(folderResponse.id(), metadata1));
+        MultipleUploadFileParameter param2 = new MultipleUploadFileParameter("test.txt", new MultipleUploadFileParameterAttributes(folderResponse.id(), metadata2));
+
+        List<UploadResponse> uploadResponse = getUploadMultipleDocumentExchange(param1, param2, builder)
+                .expectStatus().isOk()
+                .expectBody(new ParameterizedTypeReference<List<UploadResponse>>() {})
+                .returnResult().getResponseBody();
+        Assertions.assertNotNull(uploadResponse);
+        UploadResponse uploadResponse1 = uploadResponse.get(0);
+        Assertions.assertEquals(param1.filename(), uploadResponse1.name());
+        UploadResponse uploadResponse2 = uploadResponse.get(1);
+        Assertions.assertEquals(param2.filename(), uploadResponse2.name());
+
+        ListFolderRequest request = new ListFolderRequest(
+                folderResponse.id(),
+                DocumentType.FILE,
+                "text/plain",
+                null,
+                "tes",
+                Map.of("testId", uuid0.toString()),
+                75L,
+                OffsetDateTime.now().minusHours(1L),
+                null, //OffsetDateTime.now().plusHours(1L),
+                null, //OffsetDateTime.now().minusHours(1L),
+                OffsetDateTime.now().plusHours(1L),
+                "anonymousUser"
+                , "anonymousUser",
+                new PageCriteria(null, null, 1, 100));
+        var graphQlRequest = """
+                query listFolder($request:ListFolderRequest) {
+                    listFolder(request:$request) {
+                      id
+                      contentType
+                      type
+                      name
+                      metadata
+                      size
+                      createdAt
+                      updatedAt
+                      createdBy
+                      updatedBy
+                    }
+                }
+                """.trim();
+
+        HttpGraphQlClient httpGraphQlClient = getGraphQlHttpClient();
+        Mono<ClientGraphQlResponse> response = httpGraphQlClient
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+        StepVerifier.create(response)
+                .expectNextMatches(doc -> checkListFoldersReturnedSize(doc, 1))
+                .expectComplete()
+                .verify();
+
+        request = new ListFolderRequest(
+                folderResponse.id(),
+                DocumentType.FILE,
+                "text/plain",
+                "test.txt",
+                null,
+                Map.of("testId", uuid0.toString()),
+                75L,
+                OffsetDateTime.now().minusHours(1L),
+                OffsetDateTime.now().plusHours(1L),
+                OffsetDateTime.now().minusHours(1L),
+                OffsetDateTime.now().plusHours(1L),
+                "anonymousUser"
+                , "anonymousUser",
+                new PageCriteria(null, null, 1, 100));
+        graphQlRequest = """
+                query listFolder($request:ListFolderRequest) {
+                    listFolder(request:$request) {
+                      id
+                      contentType
+                      type
+                      name
+                      metadata
+                      size
+                      createdAt
+                      updatedAt
+                      createdBy
+                      updatedBy
+                    }
+                }
+                """.trim();
+
+        response = httpGraphQlClient
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+        StepVerifier.create(response)
+                .expectNextMatches(doc -> checkListFoldersReturnedSize(doc, 1))
+                .expectComplete()
+                .verify();
+
+    }
+
+    @Test
     void whenListFolderGraphQl_thenOK() {
         MultipartBodyBuilder builder = newFileBuilder("schema.sql", "test.txt");
 
@@ -173,151 +327,6 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .expectNextMatches(doc -> checkListFoldersReturnedSize(doc, 2)
                         && checkListFoldersReturnedItem(doc, 0, "appId", finalUuid.toString())
                         && checkListFoldersReturnedItem(doc, 1, "appId", finalUuid1.toString()))
-                .expectComplete()
-                .verify();
-
-        request = new ListFolderRequest(null, DocumentType.FOLDER, null, null, null, Map.of("testId", uuid0.toString()), null, null, null, null, null, null
-                , null, new PageCriteria(null, null, 1, 100));
-        graphQlRequest = """
-                query listFolder($request:ListFolderRequest) {
-                    listFolder(request:$request) {
-                      id
-                      contentType
-                      type
-                      name
-                      metadata
-                      size
-                      createdAt
-                      updatedAt
-                      createdBy
-                      updatedBy
-                    }
-                }
-                """.trim();
-
-        response = httpGraphQlClient
-                .document(graphQlRequest)
-                .variable("request",request)
-                .execute();
-
-        StepVerifier.create(response)
-                .expectNextMatches(doc -> checkListFoldersReturnedSize(doc, 0))
-                .expectComplete()
-                .verify();
-
-        CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-graphQl", null);
-
-        UploadResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
-                .body(BodyInserters.fromValue(createFolderRequest))
-                .exchange()
-                .expectStatus().isCreated()
-                .expectBody(UploadResponse.class)
-                .returnResult().getResponseBody();
-
-        builder = newFileBuilder("schema.sql", "test.txt");
-
-        uuid0 = UUID.randomUUID();
-
-        uuid1 = UUID.randomUUID();
-        metadata1 = Map.of("testId", uuid0.toString(), "appId", uuid1.toString());
-
-        uuid2 = UUID.randomUUID();
-        metadata2 = Map.of("testId", uuid0.toString(), "appId", uuid2.toString());
-
-        param1 = new MultipleUploadFileParameter("schema.sql", new MultipleUploadFileParameterAttributes(folderResponse.id(), metadata1));
-        param2 = new MultipleUploadFileParameter("test.txt", new MultipleUploadFileParameterAttributes(folderResponse.id(), metadata2));
-
-        uploadResponse = getUploadMultipleDocumentExchange(param1, param2, builder)
-                .expectStatus().isOk()
-                .expectBody(new ParameterizedTypeReference<List<UploadResponse>>() {})
-                .returnResult().getResponseBody();
-        Assertions.assertNotNull(uploadResponse);
-        uploadResponse1 = uploadResponse.get(0);
-        Assertions.assertEquals(param1.filename(), uploadResponse1.name());
-        uploadResponse2 = uploadResponse.get(1);
-        Assertions.assertEquals(param2.filename(), uploadResponse2.name());
-
-        request = new ListFolderRequest(
-                folderResponse.id(),
-                DocumentType.FILE,
-                "text/plain",
-                null,
-                "tes",
-                Map.of("testId", uuid0.toString()),
-                75L,
-                OffsetDateTime.now().minusHours(1L),
-                null, //OffsetDateTime.now().plusHours(1L),
-                null, //OffsetDateTime.now().minusHours(1L),
-                OffsetDateTime.now().plusHours(1L),
-                "anonymousUser"
-                , "anonymousUser",
-                new PageCriteria(null, null, 1, 100));
-        graphQlRequest = """
-                query listFolder($request:ListFolderRequest) {
-                    listFolder(request:$request) {
-                      id
-                      contentType
-                      type
-                      name
-                      metadata
-                      size
-                      createdAt
-                      updatedAt
-                      createdBy
-                      updatedBy
-                    }
-                }
-                """.trim();
-
-        response = httpGraphQlClient
-                .document(graphQlRequest)
-                .variable("request",request)
-                .execute();
-
-        StepVerifier.create(response)
-                .expectNextMatches(doc -> checkListFoldersReturnedSize(doc, 1))
-                .expectComplete()
-                .verify();
-
-        request = new ListFolderRequest(
-                folderResponse.id(),
-                DocumentType.FILE,
-                "text/plain",
-                "test.txt",
-                null,
-                Map.of("testId", uuid0.toString()),
-                75L,
-                OffsetDateTime.now().minusHours(1L),
-                OffsetDateTime.now().plusHours(1L),
-                OffsetDateTime.now().minusHours(1L),
-                OffsetDateTime.now().plusHours(1L),
-                "anonymousUser"
-                , "anonymousUser",
-                new PageCriteria(null, null, 1, 100));
-        graphQlRequest = """
-                query listFolder($request:ListFolderRequest) {
-                    listFolder(request:$request) {
-                      id
-                      contentType
-                      type
-                      name
-                      metadata
-                      size
-                      createdAt
-                      updatedAt
-                      createdBy
-                      updatedBy
-                    }
-                }
-                """.trim();
-
-        response = httpGraphQlClient
-                .document(graphQlRequest)
-                .variable("request",request)
-                .execute();
-
-        StepVerifier.create(response)
-                .expectNextMatches(doc -> checkListFoldersReturnedSize(doc, 1))
                 .expectComplete()
                 .verify();
 
