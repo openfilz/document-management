@@ -1,6 +1,5 @@
 package org.openfilz.dms.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -16,8 +15,8 @@ public class DocumentManagementMinioIT extends DocumentManagementLocalStorageIT 
     @Container
     static MinIOContainer minio = new MinIOContainer("minio/minio:latest");
 
-    public DocumentManagementMinioIT(WebTestClient webTestClient, ObjectMapper objectMapper) {
-        super(webTestClient, objectMapper);
+    public DocumentManagementMinioIT(WebTestClient webTestClient) {
+        super(webTestClient);
     }
 
     @DynamicPropertySource

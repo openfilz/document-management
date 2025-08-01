@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.openfilz.dms.config.ApiVersion;
+import org.openfilz.dms.config.RestApiVersion;
 import org.openfilz.dms.dto.audit.AuditLog;
 import org.openfilz.dms.dto.request.SearchByAuditLogRequest;
 import org.openfilz.dms.enums.SortOrder;
@@ -18,7 +18,7 @@ import java.util.UUID;
 
 @Slf4j
 @RestController
-@RequestMapping(ApiVersion.API_PREFIX + "/audit")
+@RequestMapping(RestApiVersion.API_PREFIX + "/audit")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "keycloak_auth")
 public class AuditController {

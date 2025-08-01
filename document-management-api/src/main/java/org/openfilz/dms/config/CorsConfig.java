@@ -8,7 +8,7 @@ import org.springframework.web.reactive.config.CorsRegistry;
 import org.springframework.web.reactive.config.EnableWebFlux;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 
-import static org.openfilz.dms.config.ApiVersion.API_PREFIX;
+import static org.openfilz.dms.config.RestApiVersion.API_PREFIX;
 
 @Configuration
 @ConditionalOnProperty(name = "spring.security.cors-allowed-origins")

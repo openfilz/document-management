@@ -1,6 +1,6 @@
 package org.openfilz.dms.service.impl;
 
-import org.openfilz.dms.config.ApiVersion;
+import org.openfilz.dms.config.RestApiVersion;
 import org.openfilz.dms.service.SecurityService;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
@@ -40,8 +40,8 @@ public abstract class AbstractSecurityService implements SecurityService {
 
     protected String getPath(ServerHttpRequest request) {
         String path = request.getPath().value();
-        int i = path.indexOf(ApiVersion.API_PREFIX);
-        return path.substring(i + ApiVersion.API_PREFIX.length());
+        int i = path.indexOf(RestApiVersion.API_PREFIX);
+        return path.substring(i + RestApiVersion.API_PREFIX.length());
     }
 
     private boolean pathStartsWith(String path, String... contextPaths) {

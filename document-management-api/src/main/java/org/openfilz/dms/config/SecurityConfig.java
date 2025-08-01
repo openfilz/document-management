@@ -78,7 +78,7 @@ public class SecurityConfig {
                                 exchanges.anyExchange().permitAll();
                             } else {
                                 exchanges.pathMatchers(AUTH_WHITELIST).permitAll() // Whitelist Swagger and health
-                                        .pathMatchers(ApiVersion.API_PREFIX + "/**")
+                                        .pathMatchers(RestApiVersion.API_PREFIX + "/**")
                                             .access((mono, context) -> mono
                                                 .map(auth -> newAuthorizationDecision(auth, context)))
                                         .anyExchange()

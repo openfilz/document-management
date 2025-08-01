@@ -1,8 +1,10 @@
 spring:
   security:
     cors-allowed-origins: http://localhost:4200/ # Comma-separated list of authorized origins
-
+  graphql:
+    graphiql:
+      enabled: true
 logging:
   level:
     io.r2dbc.postgresql.QUERY: DEBUG # for queries
-    io.r2dbc.postgresql.PARAM: DEBUG # for parameters
+    # io.r2dbc.postgresql.PARAM: DEBUG # for parameters

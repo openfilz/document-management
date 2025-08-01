@@ -1,8 +1,7 @@
 package org.openfilz.dms.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.openfilz.dms.config.ApiVersion;
+import org.openfilz.dms.config.RestApiVersion;
 import org.openfilz.dms.dto.request.MultipleUploadFileParameter;
 import org.openfilz.dms.dto.response.UploadResponse;
 import org.springframework.core.io.ClassPathResource;
@@ -26,7 +25,6 @@ public abstract class TestContainersBaseConfig {
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17.5-bookworm");
 
     protected final WebTestClient webTestClient;
-    protected final ObjectMapper objectMapper;
 
 
     @DynamicPropertySource
@@ -68,7 +66,7 @@ public abstract class TestContainersBaseConfig {
     }
 
     protected WebTestClient.RequestHeadersSpec<?> getUploadDucumentHeader(MultipartBodyBuilder builder) {
-        return webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload")
+        return webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/upload")
                         .queryParam("allowDuplicateFileNames", true)
                         .build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)
@@ -76,7 +74,7 @@ public abstract class TestContainersBaseConfig {
     }
 
     protected UploadResponse getUploadResponse(MultipartBodyBuilder builder) {
-        return webTestClient.post().uri(ApiVersion.API_PREFIX + "/documents/upload")
+        return webTestClient.post().uri(RestApiVersion.API_PREFIX + "/documents/upload")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()))
                 .exchange()
@@ -115,7 +113,7 @@ public abstract class TestContainersBaseConfig {
 
     private WebTestClient.RequestHeadersSpec<?> getUploadMultipleDocumentExchangeHeader(MultipleUploadFileParameter param1, MultipleUploadFileParameter param2, MultipartBodyBuilder builder) {
         builder.part("parametersByFilename", List.of(param1, param2));
-        return webTestClient.post().uri(uri -> uri.path(ApiVersion.API_PREFIX + "/documents/upload-multiple")
+        return webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/upload-multiple")
                 .queryParam("allowDuplicateFileNames", true)
                 .build())
                 .contentType(MediaType.MULTIPART_FORM_DATA)

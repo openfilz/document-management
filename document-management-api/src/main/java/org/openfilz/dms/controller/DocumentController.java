@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.openfilz.dms.config.ApiVersion;
+import org.openfilz.dms.config.RestApiVersion;
 import org.openfilz.dms.dto.request.*;
 import org.openfilz.dms.dto.response.ElementInfo;
 import org.openfilz.dms.dto.response.DocumentInfo;
@@ -38,7 +38,7 @@ import static org.openfilz.dms.controller.ApiDescription.ALLOW_DUPLICATE_FILE_NA
 
 @Slf4j
 @RestController
-@RequestMapping(ApiVersion.API_PREFIX + "/documents")
+@RequestMapping(RestApiVersion.API_PREFIX + "/documents")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "keycloak_auth")
 public class DocumentController {
