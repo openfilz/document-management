@@ -18,6 +18,9 @@ public class CorsConfig implements WebFluxConfigurer {
     @Value("${spring.security.cors-allowed-origins}")
     private String[] allowedOrigins;
 
+    @Value("${spring.graphql.http.path:/graphql}")
+    protected String graphQlBaseUrl;
+
     @Override
     public void addCorsMappings(CorsRegistry corsRegistry) {
 
@@ -28,5 +31,8 @@ public class CorsConfig implements WebFluxConfigurer {
                         HttpMethod.PUT.name(),
                         HttpMethod.PATCH.name(),
                         HttpMethod.DELETE.name());
+        corsRegistry.addMapping(graphQlBaseUrl + "/**")
+                .allowedOrigins(allowedOrigins)
+                .allowedMethods(HttpMethod.POST.name());
     }
 }

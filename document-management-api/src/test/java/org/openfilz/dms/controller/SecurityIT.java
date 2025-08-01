@@ -9,9 +9,13 @@ import org.junit.jupiter.api.Test;
 import org.openfilz.dms.config.RestApiVersion;
 import org.openfilz.dms.dto.request.*;
 import org.openfilz.dms.dto.response.UploadResponse;
+import org.openfilz.dms.enums.SortOrder;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.graphql.client.ClientGraphQlResponse;
+import org.springframework.graphql.client.GraphQlTransportException;
+import org.springframework.graphql.client.HttpGraphQlClient;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -22,8 +26,11 @@ import org.springframework.test.context.TestConstructor;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -31,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.context.TestConstructor.AutowireMode.ALL;
 
 @Testcontainers
@@ -94,7 +102,97 @@ public class SecurityIT extends TestContainersBaseConfig {
                 .block();
     }
 
+    protected HttpGraphQlClient newGraphQlClient(String authToken) {
+        return newGraphQlClient().mutate().header(HttpHeaders.AUTHORIZATION, "Bearer " + authToken).build();
+    }
 
+    @Test
+    void testGraphQl_ListFolders() {
+
+        ListFolderRequest request = new ListFolderRequest(null, null, null, null, null, null, null, null, null, null, null, null
+                , null, new PageCriteria("name", SortOrder.ASC, 1, 100));
+        var graphQlRequest = """
+                query listFolder($request:ListFolderRequest) {
+                    listFolder(request:$request) {
+                      id
+                      contentType
+                      type
+                      name
+                      metadata
+                    }
+                }
+                """.trim();
+
+        Mono<ClientGraphQlResponse> response = newGraphQlClient()
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+
+        StepVerifier.create(response)
+                .expectErrorSatisfies(error -> {
+                    assertThat(error).isInstanceOf(GraphQlTransportException.class);
+                    assertThat(((WebClientResponseException) error.getCause()).getStatusCode().value()).isEqualTo(401);
+                })
+                .verify();
+
+        response = newGraphQlClient(noaccessAccessToken)
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+
+        StepVerifier.create(response)
+                .expectErrorSatisfies(error -> {
+                    assertThat(error).isInstanceOf(GraphQlTransportException.class);
+                    assertThat(((WebClientResponseException) error.getCause()).getStatusCode().value()).isEqualTo(403);
+                })
+                .verify();
+
+        response = newGraphQlClient(auditAccessToken)
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+
+        StepVerifier.create(response)
+                .expectErrorSatisfies(error -> {
+                    assertThat(error).isInstanceOf(GraphQlTransportException.class);
+                    assertThat(((WebClientResponseException) error.getCause()).getStatusCode().value()).isEqualTo(403);
+                })
+                .verify();
+
+        response = newGraphQlClient(readerAccessToken)
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+
+        StepVerifier.create(response)
+                .expectNextCount(1)
+                .verifyComplete();
+
+        response = newGraphQlClient(contributorAccessToken)
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+
+        StepVerifier.create(response)
+                .expectNextCount(1)
+                .verifyComplete();
+
+        response = newGraphQlClient(adminAccessToken)
+                .document(graphQlRequest)
+                .variable("request",request)
+                .execute();
+
+
+        StepVerifier.create(response)
+                .expectNextCount(1)
+                .verifyComplete();
+
+    }
 
     @Test
     void testUpload() {

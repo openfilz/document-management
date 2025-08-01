@@ -1,6 +1,5 @@
 package org.openfilz.dms.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -11,8 +10,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public class CorsIT extends DocumentManagementLocalStorageIT {
 
-    public CorsIT(WebTestClient webTestClient, ObjectMapper objectMapper) {
-        super(webTestClient, objectMapper);
+    public CorsIT(WebTestClient webTestClient) {
+        super(webTestClient);
     }
 
     @DynamicPropertySource

@@ -14,6 +14,7 @@ public class SqlUtils {
 
     private static final String AND = "AND ";
     private static final String WHERE = " WHERE ";
+    public static final String SPACE = " ";
 
     private final ObjectMapper objectMapper;
 
@@ -30,6 +31,9 @@ public class SqlUtils {
     public DatabaseClient.GenericExecuteSpec bindCriteria(String criteria, Object value, DatabaseClient.GenericExecuteSpec query) {
         return query.bind(criteria, value);
     }
+    public DatabaseClient.GenericExecuteSpec bindLikeCriteria(String criteria, String value, DatabaseClient.GenericExecuteSpec query) {
+        return query.bind(criteria, "%" + value.toUpperCase() + "%");
+    }
 
     public DatabaseClient.GenericExecuteSpec bindMetadata(Map<String, Object> metadata, DatabaseClient.GenericExecuteSpec query) {
         try {
@@ -41,19 +45,23 @@ public class SqlUtils {
     }
 
     public void appendEqualsCriteria(String criteria, StringBuilder sql) {
-        sql.append(criteria).append(" = :").append(criteria).append(" ");
+        sql.append(criteria).append(" = :").append(criteria).append(SPACE);
+    }
+
+    public void appendLikeCriteria(String criteria, StringBuilder sql) {
+        sql.append("UPPER(").append(criteria).append(") LIKE :").append(criteria).append(SPACE);
     }
 
     public void appendLessThanCriteria(String criteria, StringBuilder sql) {
-        sql.append(criteria).append(" <= :").append(criteria).append(" ");
+        sql.append(criteria).append(" <= :").append(criteria).append(SPACE);
     }
 
     public void appendGreaterThanCriteria(String criteria, StringBuilder sql) {
-        sql.append(criteria).append(" >= :").append(criteria).append(" ");
+        sql.append(criteria).append(" >= :").append(criteria).append(SPACE);
     }
 
     public void appendBetweenCriteria(String criteria, StringBuilder sql) {
-        sql.append(criteria).append(" between :").append(criteria).append("_from and :").append(criteria).append("_to");
+        sql.append(criteria).append(" between :").append(criteria).append("_from and :").append(criteria).append("_to ");
     }
 
     public void appendIsNullCriteria(String criteria, StringBuilder sql) {

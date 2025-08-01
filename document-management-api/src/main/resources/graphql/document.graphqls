@@ -28,6 +28,7 @@ input ListFolderRequest {
     type : DocumentType
     contentType : String
     name : String
+    nameLike : String
     metadata : JSON
     size : Long
     createdAtAfter : DateTime

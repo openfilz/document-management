@@ -38,4 +38,5 @@ public class CustomExceptionResolver extends DataFetcherExceptionResolverAdapter
         }
         return ErrorType.INTERNAL_ERROR;
     }
+
 }

@@ -28,6 +28,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.openfilz.dms.entity.DocumentSqlMapping.*;
+import static org.openfilz.dms.utils.SqlUtils.SPACE;
 import static org.openfilz.dms.utils.SqlUtils.isFirst;
 
 @RequiredArgsConstructor
@@ -74,6 +75,7 @@ public class DocumentDataFetcherImpl implements DocumentDataFetcher {
             Object request = environment.getArguments().get(GRAPHQL_REQUEST);
             if(request != null) {
                 filter = objectMapper.convertValue(request, ListFolderRequest.class);
+                checkFilter(filter);
                 applyFilter(query, filter);
                 sqlQuery = bindCriteria(databaseClient.sql(query.toString()), filter);
             }
@@ -86,11 +88,14 @@ public class DocumentDataFetcherImpl implements DocumentDataFetcher {
     }
 
     private DatabaseClient.GenericExecuteSpec bindCriteria(DatabaseClient.GenericExecuteSpec query, ListFolderRequest filter) {
-        if(filter.folderId() != null) {
-            query = sqlUtils.bindCriteria(PARENT_ID, filter.folderId(), query);
+        if(filter.id() != null) {
+            query = sqlUtils.bindCriteria(PARENT_ID, filter.id(), query);
         }
         if(filter.name() != null) {
             query = sqlUtils.bindCriteria(NAME, filter.name(), query);
+        }
+        if(filter.nameLike() != null) {
+            query = sqlUtils.bindLikeCriteria(NAME, filter.nameLike(), query);
         }
         if(filter.type() != null) {
             query = sqlUtils.bindCriteria(TYPE, filter.type().toString(), query);
@@ -133,6 +138,12 @@ public class DocumentDataFetcherImpl implements DocumentDataFetcher {
         return query;
     }
 
+    private void checkFilter(ListFolderRequest filter) {
+        if(filter.name() != null && filter.nameLike() != null) {
+            throw new IllegalArgumentException("name and nameLike cannot be used simultaneously : choose name or nameLike in your filter");
+        }
+    }
+
     private void applyFilter(StringBuilder query, ListFolderRequest request) {
         if(request.pageInfo() == null) {
             throw new IllegalArgumentException("page info is required");
@@ -144,7 +155,7 @@ public class DocumentDataFetcherImpl implements DocumentDataFetcher {
             throw new IllegalArgumentException("pageInfo.pageSize must be less than " + MAX_PAGE_SIZE);
         }
         boolean first = true;
-        if(request.folderId() != null) {
+        if(request.id() != null) {
             first = isFirst(first, query);
             sqlUtils.appendEqualsCriteria(PARENT_ID, query);
         } else {
@@ -162,6 +173,10 @@ public class DocumentDataFetcherImpl implements DocumentDataFetcher {
         if(request.name() != null) {
             first = isFirst(first, query);
             sqlUtils.appendEqualsCriteria(NAME, query);
+        }
+        if(request.nameLike() != null) {
+            first = isFirst(first, query);
+            sqlUtils.appendLikeCriteria(NAME, query);
         }
         if(request.metadata() != null && !request.metadata().isEmpty()) {
             first = isFirst(first, query);
@@ -187,20 +202,36 @@ public class DocumentDataFetcherImpl implements DocumentDataFetcher {
                 sqlUtils.appendLessThanCriteria(CREATED_AT, query);
             }
         } else if(request.createdAtAfter() != null) {
+            first = isFirst(first, query);
             sqlUtils.appendGreaterThanCriteria(CREATED_AT, query);
         }
         if(request.updatedAtBefore() != null) {
-            isFirst(first, query);
+            first = isFirst(first, query);
             if(request.updatedAtAfter() != null) {
                 sqlUtils.appendBetweenCriteria(UPDATED_AT, query);
             } else {
                 sqlUtils.appendLessThanCriteria(UPDATED_AT, query);
             }
         } else if(request.updatedAtAfter() != null) {
+            first = isFirst(first, query);
             sqlUtils.appendGreaterThanCriteria(UPDATED_AT, query);
         }
-        query.append(OFFSET).append((request.pageInfo().pageNumber() - 1) * request.pageInfo().pageSize())
-                .append(LIMIT).append(request.pageInfo().pageSize());
+        if(request.pageInfo().sortBy() != null) {
+            appendSort(query, request);
+        }
+        appendOffsetLimit(query, request);
+    }
+
+    private void appendSort(StringBuilder query, ListFolderRequest request) {
+        query.append(" ORDER BY ").append(DOCUMENT_FIELD_SQL_MAP.get(request.pageInfo().sortBy()));
+        if(request.pageInfo().sortOrder() != null) {
+            query.append(SPACE).append(request.pageInfo().sortOrder());
+        }
+    }
+
+    private void appendOffsetLimit(StringBuilder query, ListFolderRequest request) {
+        query.append(LIMIT).append(request.pageInfo().pageSize())
+                .append(OFFSET).append((request.pageInfo().pageNumber() - 1) * request.pageInfo().pageSize());
     }
 
 
