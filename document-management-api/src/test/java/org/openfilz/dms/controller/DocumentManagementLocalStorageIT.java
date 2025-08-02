@@ -275,8 +275,8 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 null,
                 Map.of("testId", uuid0.toString()),
                 75L,
-                SqlUtils.dateToString(OffsetDateTime.now().minusDays(1L)),
-                SqlUtils.dateToString(OffsetDateTime.now().plusDays(1L)),
+                null,
+                null,
                 null,
                 null,
                 "anonymousUser"
