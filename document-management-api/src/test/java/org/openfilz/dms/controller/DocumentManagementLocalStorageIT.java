@@ -277,8 +277,8 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 75L,
                 SqlUtils.dateToString(OffsetDateTime.now().minusDays(1L)),
                 SqlUtils.dateToString(OffsetDateTime.now().plusDays(1L)),
-                SqlUtils.dateToString(OffsetDateTime.now().minusDays(1L)),
-                SqlUtils.dateToString(OffsetDateTime.now().plusDays(1L)),
+                null,
+                null,
                 "anonymousUser"
                 , "anonymousUser",
                 new PageCriteria(null, null, 1, 100));
