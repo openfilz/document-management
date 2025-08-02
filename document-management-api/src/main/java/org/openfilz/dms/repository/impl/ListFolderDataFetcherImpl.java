@@ -2,78 +2,37 @@ package org.openfilz.dms.repository.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.schema.DataFetchingEnvironment;
-import graphql.schema.SelectedField;
-import io.r2dbc.postgresql.codec.Json;
-import io.r2dbc.spi.Readable;
-import lombok.RequiredArgsConstructor;
+import org.openfilz.dms.config.GraphQlQueryConfig;
 import org.openfilz.dms.dto.request.ListFolderRequest;
 import org.openfilz.dms.dto.response.FullDocumentInfo;
-import org.openfilz.dms.entity.Document;
-import org.openfilz.dms.enums.DocumentType;
 import org.openfilz.dms.mapper.DocumentMapper;
 import org.openfilz.dms.repository.ListFolderDataFetcher;
 import org.openfilz.dms.utils.SqlUtils;
-import org.springframework.data.util.ParsingUtils;
 import org.springframework.r2dbc.core.DatabaseClient;
 import reactor.core.publisher.Flux;
 
-import java.beans.FeatureDescriptor;
-import java.beans.IntrospectionException;
-import java.beans.Introspector;
-import java.time.OffsetDateTime;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static org.openfilz.dms.entity.DocumentSqlMapping.*;
 import static org.openfilz.dms.utils.SqlUtils.SPACE;
 import static org.openfilz.dms.utils.SqlUtils.isFirst;
 
 //@Slf4j
-@RequiredArgsConstructor
-public class ListFolderDataFetcherImpl implements ListFolderDataFetcher {
+public class ListFolderDataFetcherImpl extends AbstractDataFetcher implements ListFolderDataFetcher {
 
-    private static final int MAX_PAGE_SIZE = 100;
-
-    private static final String UNDERSCORE = "_";
-
-    private static final Map<String, String> DOCUMENT_FIELD_SQL_MAP;
-    public static final String FROM_DOCUMENTS = " from Documents";
-
-    public static final String OFFSET = " OFFSET ";
-    public static final String LIMIT = " LIMIT ";
-
-    public static final String SELECT = "select ";
-    public static final String COMMA = ", ";
-    public static final String GRAPHQL_REQUEST = "request";
-
-    static {
-        try {
-            DOCUMENT_FIELD_SQL_MAP = Arrays.stream(Introspector.getBeanInfo(Document.class)
-                            .getPropertyDescriptors())
-                    .collect(Collectors.toMap(FeatureDescriptor::getName,
-                            pd -> ParsingUtils.reconcatenateCamelCase(pd.getName(), UNDERSCORE)));
-        } catch (IntrospectionException e) {
-            throw new RuntimeException(e);
-        }
+    public ListFolderDataFetcherImpl(DatabaseClient databaseClient, DocumentMapper mapper, ObjectMapper objectMapper, SqlUtils sqlUtils) {
+        super(databaseClient, mapper, objectMapper, sqlUtils);
     }
 
-    private final DatabaseClient databaseClient;
-    private final DocumentMapper mapper;
-    private final ObjectMapper  objectMapper;
-    private final SqlUtils sqlUtils;
 
     @Override
     public Flux<FullDocumentInfo> get(DataFetchingEnvironment environment) throws Exception {
-        List<SelectedField> objectFields = environment.getSelectionSet().getFields();
-        List<String> sqlFields = getSqlFields(objectFields);
+        List<String> sqlFields = getSqlFields(environment);
+        StringBuilder query = toSelect(sqlFields).append(SqlUtils.FROM_DOCUMENTS);
         ListFolderRequest filter = null;
-        StringBuilder query = toSelect(sqlFields).append(FROM_DOCUMENTS);
         DatabaseClient.GenericExecuteSpec sqlQuery = null;
         if(environment.getArguments() != null) {
-            Object request = environment.getArguments().get(GRAPHQL_REQUEST);
+            Object request = environment.getArguments().get(GraphQlQueryConfig.GRAPHQL_REQUEST);
             if(request != null) {
                 filter = objectMapper.convertValue(request, ListFolderRequest.class);
                 checkFilter(filter);
@@ -153,8 +112,8 @@ public class ListFolderDataFetcherImpl implements ListFolderDataFetcher {
         if(request.pageInfo().pageNumber() == null || request.pageInfo().pageNumber() < 1 ) {
             throw new IllegalArgumentException("pageInfo.pageNumber must be greater than 1");
         }
-        if(request.pageInfo().pageSize() > MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("pageInfo.pageSize must be less than " + MAX_PAGE_SIZE);
+        if(request.pageInfo().pageSize() > SqlUtils.MAX_PAGE_SIZE) {
+            throw new IllegalArgumentException("pageInfo.pageSize must be less than " + SqlUtils.MAX_PAGE_SIZE);
         }
         boolean first = true;
         if(request.id() != null) {
@@ -225,44 +184,15 @@ public class ListFolderDataFetcherImpl implements ListFolderDataFetcher {
     }
 
     private void appendSort(StringBuilder query, ListFolderRequest request) {
-        query.append(" ORDER BY ").append(DOCUMENT_FIELD_SQL_MAP.get(request.pageInfo().sortBy()));
+        query.append(SqlUtils.ORDER_BY).append(DOCUMENT_FIELD_SQL_MAP.get(request.pageInfo().sortBy()));
         if(request.pageInfo().sortOrder() != null) {
             query.append(SPACE).append(request.pageInfo().sortOrder());
         }
     }
 
     private void appendOffsetLimit(StringBuilder query, ListFolderRequest request) {
-        query.append(LIMIT).append(request.pageInfo().pageSize())
-                .append(OFFSET).append((request.pageInfo().pageNumber() - 1) * request.pageInfo().pageSize());
+        query.append(SqlUtils.LIMIT).append(request.pageInfo().pageSize())
+                .append(SqlUtils.OFFSET).append((request.pageInfo().pageNumber() - 1) * request.pageInfo().pageSize());
     }
 
-
-    private Document buildDocument(Readable row, List<String> fields) {
-        Document.DocumentBuilder builder = Document.builder();
-        fields.forEach(field -> {
-            switch (field) {
-                case ID -> builder.id(row.get(field, UUID.class));
-                case NAME -> builder.name(row.get(field, String.class));
-                case TYPE -> builder.type(DocumentType.valueOf(row.get(field, String.class)));
-                case SIZE -> builder.size(row.get(field, Long.class));
-                case METADATA -> builder.metadata(row.get(field, Json.class));
-                case CREATED_AT -> builder.createdAt(row.get(field, OffsetDateTime.class));
-                case UPDATED_AT -> builder.updatedAt(row.get(field, OffsetDateTime.class));
-                case CREATED_BY -> builder.createdBy(row.get(field, String.class));
-                case UPDATED_BY -> builder.updatedBy(row.get(field, String.class));
-                case CONTENT_TYPE -> builder.contentType(row.get(field, String.class));
-            }
-        });
-        return builder.build();
-    }
-
-    private List<String> getSqlFields(List<SelectedField> fields) {
-        return fields.stream()
-                .map(field -> DOCUMENT_FIELD_SQL_MAP.get(field.getName()))
-                .toList();
-    }
-
-    private StringBuilder toSelect(List<String> fields) {
-        return new StringBuilder(SELECT).append(String.join(COMMA, fields));
-    }
 }

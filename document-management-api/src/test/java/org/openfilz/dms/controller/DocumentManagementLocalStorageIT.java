@@ -3,6 +3,7 @@ package org.openfilz.dms.controller;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.openfilz.dms.config.GraphQlQueryConfig;
 import org.openfilz.dms.config.RestApiVersion;
 import org.openfilz.dms.dto.audit.AuditLog;
 import org.openfilz.dms.dto.request.*;
@@ -76,6 +77,8 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     public DocumentManagementLocalStorageIT(WebTestClient webTestClient) {
         super(webTestClient);
     }
+
+
 
     @Test
     void whenCountElements_thenOK() {
@@ -199,7 +202,56 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     }
 
     @Test
-    void whenListNewFolderGraphQl_thenOK() throws IOException {
+    void whenGetDocByIdGraphQl_thenOK() {
+        CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-docById"+UUID.randomUUID(), null);
+
+        FolderResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
+                .body(BodyInserters.fromValue(createFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(FolderResponse.class)
+                .returnResult().getResponseBody();
+
+        MultipartBodyBuilder builder = newFileBuilder();
+        builder.part("parentFolderId", folderResponse.id().toString());
+        UploadResponse uploadedFile = getUploadResponse(builder);
+
+        String graphQlRequest = """
+                query documentById($id:UUID!) {
+                    documentById(id:$id) {
+                      id
+                      parentId
+                      contentType
+                      type
+                      name
+                      metadata
+                      size
+                      createdAt
+                      updatedAt
+                      createdBy
+                      updatedBy
+                    }
+                }
+                """.trim();
+        HttpGraphQlClient httpGraphQlClient = getGraphQlHttpClient();
+        Mono<ClientGraphQlResponse> response = httpGraphQlClient
+                .document(graphQlRequest)
+                .variable("id",uploadedFile.id())
+                .execute();
+
+        StepVerifier.create(response)
+                .expectNextMatches(doc -> checkDocById(doc, uploadedFile))
+                .expectComplete()
+                .verify();
+    }
+
+    private boolean checkDocById(ClientGraphQlResponse doc, UploadResponse uploadedFile) {
+        Map<String, Object> items = ((Map<String, Map<String, Object>>) doc.getData()).get(GraphQlQueryConfig.DOCUMENT_BY_ID);
+        return items.get("id").equals(uploadedFile.id().toString()) && items.get("name").equals(uploadedFile.name()) && items.get("contentType").equals(uploadedFile.contentType()) && Long.valueOf(items.get("size").toString()).equals(uploadedFile.size());
+    }
+
+    @Test
+    void whenListNewFolderGraphQl_thenOK() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-graphQl"+UUID.randomUUID(), null);
 
         FolderResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
