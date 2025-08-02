@@ -274,7 +274,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 "test.txt",
                 null,
                 Map.of("testId", uuid0.toString()),
-                75L,
+                null,
                 null,
                 null,
                 null,
