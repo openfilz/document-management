@@ -6,6 +6,7 @@ import graphql.schema.SelectedField;
 import io.r2dbc.postgresql.codec.Json;
 import io.r2dbc.spi.Readable;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.openfilz.dms.dto.request.ListFolderRequest;
 import org.openfilz.dms.dto.response.FullDocumentInfo;
 import org.openfilz.dms.entity.Document;
@@ -31,6 +32,7 @@ import static org.openfilz.dms.entity.DocumentSqlMapping.*;
 import static org.openfilz.dms.utils.SqlUtils.SPACE;
 import static org.openfilz.dms.utils.SqlUtils.isFirst;
 
+@Slf4j
 @RequiredArgsConstructor
 public class DocumentDataFetcherImpl implements DocumentDataFetcher {
 
@@ -83,6 +85,7 @@ public class DocumentDataFetcherImpl implements DocumentDataFetcher {
         if(sqlQuery == null) {
             sqlQuery = databaseClient.sql(query.toString());
         }
+        log.debug("GraphQL - SQL query : {}", query);
         return sqlQuery.map(row -> mapper.toFullDocumentInfo(buildDocument(row, sqlFields)))
                 .all();
     }
