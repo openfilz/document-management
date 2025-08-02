@@ -63,9 +63,18 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     private HttpGraphQlClient graphQlHttpClient;
 
+    private static Long testTxtSize;
+
+    static {
+        try {
+             testTxtSize = (long) ClassLoader.getSystemResource("test.txt").openConnection().getContentLength();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public DocumentManagementLocalStorageIT(WebTestClient webTestClient) {
         super(webTestClient);
-
     }
 
     @Test
@@ -156,7 +165,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     }
 
     @Test
-    void whenListNewFolderGraphQl_thenOK() {
+    void whenListNewFolderGraphQl_thenOK() throws IOException {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-graphQl"+UUID.randomUUID(), null);
 
         UploadResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
@@ -167,6 +176,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .returnResult().getResponseBody();
 
         MultipartBodyBuilder builder = newFileBuilder("schema.sql", "test.txt");
+
 
         UUID uuid0 = UUID.randomUUID();
 
@@ -196,7 +206,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 null,
                 "tes",
                 Map.of("testId", uuid0.toString()),
-                75L,
+                testTxtSize,
                 SqlUtils.dateToString(OffsetDateTime.now().minusDays(1L)),
                 null, //OffsetDateTime.now().plusHours(1L),
                 null, //OffsetDateTime.now().minusHours(1L),
@@ -270,17 +280,17 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         ListFolderRequest request = new ListFolderRequest(
                 folderResponse.id(),
                 DocumentType.FILE,
-                null,
+                "text/plain",
                 "test.txt",
                 null,
                 Map.of("testId", uuid0.toString()),
-                null,
-                null,
-                null,
-                null,
-                null,
-                "anonymousUser"
-                , "anonymousUser",
+                testTxtSize,
+                SqlUtils.dateToString(OffsetDateTime.now().minusHours(1L)),
+                SqlUtils.dateToString(OffsetDateTime.now().plusHours(1L)),
+                SqlUtils.dateToString(OffsetDateTime.now().minusHours(1L)),
+                SqlUtils.dateToString( OffsetDateTime.now().plusHours(1L)),
+                "anonymousUser",
+                "anonymousUser",
                 new PageCriteria(null, null, 1, 100));
         var graphQlRequest = """
                 query listFolder($request:ListFolderRequest) {
