@@ -157,7 +157,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
     @Test
     void whenListNewFolderGraphQl_thenOK() {
-        CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-graphQl", null);
+        CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-graphQl"+UUID.randomUUID(), null);
 
         UploadResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
@@ -232,7 +232,42 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .expectComplete()
                 .verify();
 
-        request = new ListFolderRequest(
+
+    }
+
+    @Test
+    public void whenGetFileInNewFolderGraphQl_thenOK() {
+        CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-graphQl"+UUID.randomUUID(), null);
+
+        UploadResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
+                .body(BodyInserters.fromValue(createFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(UploadResponse.class)
+                .returnResult().getResponseBody();
+        MultipartBodyBuilder builder = newFileBuilder("schema.sql", "test.txt");
+
+        UUID uuid0 = UUID.randomUUID();
+
+        UUID uuid1 = UUID.randomUUID();
+        Map<String, Object> metadata1 = Map.of("testId", uuid0.toString(), "appId", uuid1.toString());
+
+        UUID uuid2 = UUID.randomUUID();
+        Map<String, Object> metadata2 = Map.of("testId", uuid0.toString(), "appId", uuid2.toString());
+
+        MultipleUploadFileParameter param1 = new MultipleUploadFileParameter("schema.sql", new MultipleUploadFileParameterAttributes(folderResponse.id(), metadata1));
+        MultipleUploadFileParameter param2 = new MultipleUploadFileParameter("test.txt", new MultipleUploadFileParameterAttributes(folderResponse.id(), metadata2));
+
+        List<UploadResponse> uploadResponse = getUploadMultipleDocumentExchange(param1, param2, builder)
+                .expectStatus().isOk()
+                .expectBody(new ParameterizedTypeReference<List<UploadResponse>>() {})
+                .returnResult().getResponseBody();
+        Assertions.assertNotNull(uploadResponse);
+        UploadResponse uploadResponse1 = uploadResponse.get(0);
+        Assertions.assertEquals(param1.filename(), uploadResponse1.name());
+        UploadResponse uploadResponse2 = uploadResponse.get(1);
+        Assertions.assertEquals(param2.filename(), uploadResponse2.name());
+        ListFolderRequest request = new ListFolderRequest(
                 folderResponse.id(),
                 DocumentType.FILE,
                 "text/plain",
@@ -247,7 +282,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 "anonymousUser"
                 , "anonymousUser",
                 new PageCriteria(null, null, 1, 100));
-        graphQlRequest = """
+        var graphQlRequest = """
                 query listFolder($request:ListFolderRequest) {
                     listFolder(request:$request) {
                       id
@@ -264,7 +299,7 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 }
                 """.trim();
 
-        response = httpGraphQlClient
+        var response = getGraphQlHttpClient()
                 .document(graphQlRequest)
                 .variable("request",request)
                 .execute();
@@ -273,7 +308,6 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .expectNextMatches(doc -> checkListFoldersReturnedSize(doc, 1))
                 .expectComplete()
                 .verify();
-
     }
 
     @Test
