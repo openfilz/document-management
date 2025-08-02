@@ -270,8 +270,8 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         ListFolderRequest request = new ListFolderRequest(
                 folderResponse.id(),
                 DocumentType.FILE,
-                "text/plain",
-                "test.txt",
+                null,
+                null,
                 null,
                 Map.of("testId", uuid0.toString()),
                 null,
