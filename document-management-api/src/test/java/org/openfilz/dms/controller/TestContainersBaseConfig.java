@@ -49,7 +49,7 @@ public abstract class TestContainersBaseConfig {
     }
 
     protected WebTestClient.ResponseSpec getUploadDocumentExchange(MultipartBodyBuilder builder, String accessToken) {
-        return uploadDocument(addAuthorization(getUploadDucumentHeader(builder), accessToken));
+        return uploadDocument(addAuthorization(getUploadDocumentHeader(builder), accessToken));
     }
 
     protected WebTestClient.RequestHeadersSpec<?> addAuthorization( WebTestClient.RequestHeadersSpec<?> header, String accessToken) {
@@ -57,11 +57,11 @@ public abstract class TestContainersBaseConfig {
     }
 
     protected WebTestClient.ResponseSpec getUploadDocumentExchange(MultipartBodyBuilder builder) {
-        return uploadDocument(getUploadDucumentHeader(builder));
+        return uploadDocument(getUploadDocumentHeader(builder));
     }
 
     protected UploadResponse uploadDocument(MultipartBodyBuilder builder) {
-        return getUploadDocumentResponseBody(getUploadDucumentHeader(builder));
+        return getUploadDocumentResponseBody(getUploadDocumentHeader(builder));
     }
 
     protected UploadResponse getUploadDocumentResponseBody(WebTestClient.RequestHeadersSpec<?> uploadDucumentHeader) {
@@ -76,7 +76,7 @@ public abstract class TestContainersBaseConfig {
                 .exchange();
     }
 
-    protected WebTestClient.RequestHeadersSpec<?> getUploadDucumentHeader(MultipartBodyBuilder builder) {
+    protected WebTestClient.RequestHeadersSpec<?> getUploadDocumentHeader(MultipartBodyBuilder builder) {
         return webTestClient.post().uri(uri -> uri.path(RestApiVersion.API_PREFIX + "/documents/upload")
                         .queryParam("allowDuplicateFileNames", true)
                         .build())

@@ -78,6 +78,40 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     }
 
     @Test
+    void whenCountElements_thenOK() {
+        CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-Count"+UUID.randomUUID(), null);
+
+        FolderResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
+                .body(BodyInserters.fromValue(createFolderRequest))
+                .exchange()
+                .expectStatus().isCreated()
+                .expectBody(FolderResponse.class)
+                .returnResult().getResponseBody();
+
+        MultipartBodyBuilder builder = newFileBuilder();
+        builder.part("parentFolderId", folderResponse.id().toString());
+        UploadResponse response = getUploadResponse(builder);
+
+        Long count = webTestClient.get().uri(uri ->
+                        uri.path(RestApiVersion.API_PREFIX + "/folders/count")
+                                .queryParam("folderId", folderResponse.id().toString())
+                                .build())
+                .exchange()
+                .expectBody(Long.class)
+                .returnResult().getResponseBody();
+        Assertions.assertEquals(1L, count);
+
+        builder = newFileBuilder();
+
+        getUploadDocumentExchange(builder).expectStatus().isCreated();
+        count = webTestClient.get().uri(RestApiVersion.API_PREFIX + "/folders/count")
+                .exchange()
+                .expectBody(Long.class)
+                .returnResult().getResponseBody();
+        Assertions.assertTrue(count > 0);
+    }
+
+    @Test
     void whenListFolderGraphQlNoPaging_thenError() {
         HttpGraphQlClient httpGraphQlClient = getGraphQlHttpClient();
         //create post
@@ -168,11 +202,11 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     void whenListNewFolderGraphQl_thenOK() throws IOException {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-graphQl"+UUID.randomUUID(), null);
 
-        UploadResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
+        FolderResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
-                .expectBody(UploadResponse.class)
+                .expectBody(FolderResponse.class)
                 .returnResult().getResponseBody();
 
         MultipartBodyBuilder builder = newFileBuilder("schema.sql", "test.txt");
@@ -249,11 +283,11 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     public void whenGetFileInNewFolderGraphQl_thenOK() {
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-graphQl"+UUID.randomUUID(), null);
 
-        UploadResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
+        FolderResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
-                .expectBody(UploadResponse.class)
+                .expectBody(FolderResponse.class)
                 .returnResult().getResponseBody();
         MultipartBodyBuilder builder = newFileBuilder("schema.sql", "test.txt");
 
@@ -813,11 +847,11 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-bb", null);
 
-        UploadResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
+        FolderResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
-                .expectBody(UploadResponse.class)
+                .expectBody(FolderResponse.class)
                 .returnResult().getResponseBody();
 
         CopyRequest copyRequest = new CopyRequest(Collections.singletonList(response.id()), folderResponse.id(), false);
@@ -1112,11 +1146,11 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
 
         CreateFolderRequest createFolderRequest = new CreateFolderRequest("test-folder-a", null);
 
-        UploadResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
+        FolderResponse folderResponse = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
                 .exchange()
                 .expectStatus().isCreated()
-                .expectBody(UploadResponse.class)
+                .expectBody(FolderResponse.class)
                 .returnResult().getResponseBody();
 
         MoveRequest moveRequest = new MoveRequest(Collections.singletonList(response.id()), folderResponse.id(), false);

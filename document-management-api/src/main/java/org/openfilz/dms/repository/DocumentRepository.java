@@ -55,6 +55,9 @@ public interface DocumentRepository extends ReactiveCrudRepository<Document, UUI
 
     Flux<Document> findByParentIdAndType(UUID parentId, DocumentType type);
 
+    Mono<Long> countDocumentByParentIdIsNull();
+
+    Mono<Long> countDocumentByParentIdEquals(UUID parentId);
 
 
     // For recursive fetching of folder contents (can be complex with R2DBC, might need multiple queries or a DB function)

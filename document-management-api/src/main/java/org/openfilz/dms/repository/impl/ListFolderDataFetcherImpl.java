@@ -11,7 +11,7 @@ import org.openfilz.dms.dto.response.FullDocumentInfo;
 import org.openfilz.dms.entity.Document;
 import org.openfilz.dms.enums.DocumentType;
 import org.openfilz.dms.mapper.DocumentMapper;
-import org.openfilz.dms.repository.DocumentDataFetcher;
+import org.openfilz.dms.repository.ListFolderDataFetcher;
 import org.openfilz.dms.utils.SqlUtils;
 import org.springframework.data.util.ParsingUtils;
 import org.springframework.r2dbc.core.DatabaseClient;
@@ -33,7 +33,7 @@ import static org.openfilz.dms.utils.SqlUtils.isFirst;
 
 //@Slf4j
 @RequiredArgsConstructor
-public class DocumentDataFetcherImpl implements DocumentDataFetcher {
+public class ListFolderDataFetcherImpl implements ListFolderDataFetcher {
 
     private static final int MAX_PAGE_SIZE = 100;
 

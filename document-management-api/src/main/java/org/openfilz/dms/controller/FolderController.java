@@ -76,4 +76,12 @@ public class FolderController {
             Authentication authentication) {
         return documentService.listFolderInfo(folderId, onlyFiles, onlyFolders, authentication);
     }
+
+    @GetMapping("/count") // List all documents in a given folder
+    @Operation(summary = "Count files and subfolders contained in a given folder - return 0 if empty or not exists",
+            description = "Retrieves the number of elements (files and folders) contained in a given folder - return 0 if empty or not exists" +
+                    "(no recursive count, just count the flat list of objects at the root level of a folder)")
+    public Mono<Long> countFolderElements(@RequestParam(required = false) @Parameter(description = "ID of the folder or to count elements at the root level") UUID folderId, Authentication authentication) {
+        return documentService.countFolderElements(folderId, authentication);
+    }
 }
