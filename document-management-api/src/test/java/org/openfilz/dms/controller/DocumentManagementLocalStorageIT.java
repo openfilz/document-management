@@ -270,8 +270,8 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         ListFolderRequest request = new ListFolderRequest(
                 folderResponse.id(),
                 DocumentType.FILE,
-                "text/plain",
                 null,
+                "test.txt",
                 null,
                 Map.of("testId", uuid0.toString()),
                 null,
@@ -368,14 +368,12 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     }
 
     private boolean checkListFoldersReturnedItem(ClientGraphQlResponse doc, int itemIndex, String metadataKey, String metadataValue) {
-        log.debug("checkListFoldersReturnedItem {}", doc);
         List<Map<String, Object>> items = (List<Map<String, Object>>) ((Map<String, Map<String, Object>>) doc.getData()).get("listFolder");
         return ((Map<String, Object>) items.get(itemIndex).get("metadata")).get(metadataKey).equals(metadataValue);
         //return items.stream().anyMatch(map->((Map<String, Object>) map.get("metadata")).get(metadataKey).equals(metadataValue));
     }
 
     private boolean checkListFoldersReturnedSize(ClientGraphQlResponse doc, int expectedSize) {
-        log.debug("checkListFoldersReturnedSize {}", doc);
         return ((List<Map<String, Object>>) ((Map<String, Map<String, Object>>) doc.getData()).get("listFolder")).size() == expectedSize;
     }
 
