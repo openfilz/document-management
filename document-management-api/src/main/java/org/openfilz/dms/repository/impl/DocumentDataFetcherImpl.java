@@ -31,6 +31,7 @@ import static org.openfilz.dms.entity.DocumentSqlMapping.*;
 import static org.openfilz.dms.utils.SqlUtils.SPACE;
 import static org.openfilz.dms.utils.SqlUtils.isFirst;
 
+//@Slf4j
 @RequiredArgsConstructor
 public class DocumentDataFetcherImpl implements DocumentDataFetcher {
 
@@ -83,6 +84,7 @@ public class DocumentDataFetcherImpl implements DocumentDataFetcher {
         if(sqlQuery == null) {
             sqlQuery = databaseClient.sql(query.toString());
         }
+        //log.debug("GraphQL - SQL query : {}", query);
         return sqlQuery.map(row -> mapper.toFullDocumentInfo(buildDocument(row, sqlFields)))
                 .all();
     }
@@ -111,23 +113,23 @@ public class DocumentDataFetcherImpl implements DocumentDataFetcher {
         }
         if(filter.createdAtBefore() != null) {
             if(filter.createdAtAfter() != null) {
-                query = sqlUtils.bindCriteria(CREATED_AT_FROM, filter.createdAtAfter(), query);
-                query = sqlUtils.bindCriteria(CREATED_AT_TO, filter.createdAtBefore(), query);
+                query = sqlUtils.bindCriteria(CREATED_AT_FROM, SqlUtils.stringToDate(filter.createdAtAfter()), query);
+                query = sqlUtils.bindCriteria(CREATED_AT_TO, SqlUtils.stringToDate(filter.createdAtBefore()), query);
             } else {
-                query = sqlUtils.bindCriteria(CREATED_AT, filter.createdAtBefore(), query);
+                query = sqlUtils.bindCriteria(CREATED_AT, SqlUtils.stringToDate(filter.createdAtBefore()), query);
             }
         } else if(filter.createdAtAfter() != null) {
-            query = sqlUtils.bindCriteria(CREATED_AT, filter.createdAtAfter(), query);
+            query = sqlUtils.bindCriteria(CREATED_AT, SqlUtils.stringToDate(filter.createdAtAfter()), query);
         }
         if(filter.updatedAtBefore() != null) {
             if(filter.updatedAtAfter() != null) {
-                query = sqlUtils.bindCriteria(UPDATED_AT_FROM, filter.updatedAtAfter(), query);
-                query = sqlUtils.bindCriteria(UPDATED_AT_TO, filter.updatedAtBefore(), query);
+                query = sqlUtils.bindCriteria(UPDATED_AT_FROM, SqlUtils.stringToDate(filter.updatedAtAfter()), query);
+                query = sqlUtils.bindCriteria(UPDATED_AT_TO, SqlUtils.stringToDate(filter.updatedAtBefore()), query);
             } else {
-                query = sqlUtils.bindCriteria(UPDATED_AT, filter.updatedAtBefore(), query);
+                query = sqlUtils.bindCriteria(UPDATED_AT, SqlUtils.stringToDate(filter.updatedAtBefore()), query);
             }
         } else if(filter.updatedAtAfter() != null) {
-            query = sqlUtils.bindCriteria(UPDATED_AT, filter.updatedAtAfter(), query);
+            query = sqlUtils.bindCriteria(UPDATED_AT, SqlUtils.stringToDate(filter.updatedAtAfter()), query);
         }
         if(filter.createdBy() != null) {
             query = sqlUtils.bindCriteria(CREATED_BY, filter.createdBy(), query);
