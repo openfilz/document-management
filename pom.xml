@@ -4,7 +4,7 @@
 
     <groupId>org.openfilz</groupId>
     <artifactId>document-management</artifactId>
-    <version>1.0.44-SNAPSHOT</version>
+    <version>1.0.48-SNAPSHOT</version>
     <packaging>pom</packaging>
     <url>https://github.com/openfilz/document-management</url>
 

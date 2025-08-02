@@ -4,20 +4,21 @@
 **[maven-release-plugin] prepare for next development iteration**
 
 
-[60c529a4f2eae97](https://github.com/openfilz/document-management/commit/60c529a4f2eae97) maven-release-bot[bot] *2025-07-28 10:45:24*
+[6bfed1b17faf47e](https://github.com/openfilz/document-management/commit/6bfed1b17faf47e) maven-release-bot[bot] *2025-08-02 20:43:38*
 
 
-## v1.0.43
+## v1.0.47
 ### No issue
 
-**[maven-release-plugin] prepare release v1.0.43**
+**[maven-release-plugin] prepare release v1.0.47**
 
 
-[39603705b67bdfb](https://github.com/openfilz/document-management/commit/39603705b67bdfb) maven-release-bot[bot] *2025-07-28 10:45:22*
+[3ef6dc7c7e1a95c](https://github.com/openfilz/document-management/commit/3ef6dc7c7e1a95c) maven-release-bot[bot] *2025-08-02 20:43:36*
 
-**Typo fix for javadoc**
+**Merge pull request #78 from openfilz/develop**
 
+ * GraphQL + New UI
 
-[89ec00ec901bb2b](https://github.com/openfilz/document-management/commit/89ec00ec901bb2b) Yann Demel *2025-07-28 10:44:38*
+[eb261ddadc960cf](https://github.com/openfilz/document-management/commit/eb261ddadc960cf) Yann Demel *2025-08-02 20:42:48*
 
 
