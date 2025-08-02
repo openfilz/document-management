@@ -15,9 +15,17 @@ import java.util.Map;
 @Component
 public class SqlUtils {
 
-    private static final String AND = "AND ";
-    private static final String WHERE = " WHERE ";
+    public static final String FROM_DOCUMENTS = " from Documents";
+    public static final String OFFSET = " OFFSET ";
+    public static final String LIMIT = " LIMIT ";
+    public static final String SELECT = "select ";
+    public static final String COMMA = ", ";
+    public static final String ORDER_BY = " ORDER BY ";
+    public static final String AND = "AND ";
+    public static final String WHERE = " WHERE ";
     public static final String SPACE = " ";
+    public static final int MAX_PAGE_SIZE = 100;
+    public static final String UNDERSCORE = "_";
 
     private final ObjectMapper objectMapper;
 

@@ -7,11 +7,25 @@ scalar UUID
 
 type Query {
     listFolder(request: ListFolderRequest): [FolderElementInfo]
-    documentById(id: UUID!): FolderElementInfo
+    documentById(id: UUID!): DocumentInfo
 }
 
 type FolderElementInfo {
     id : UUID
+    type : DocumentType
+    contentType : String
+    name : String
+    metadata : JSON
+    size : Long
+    createdAt : DateTime
+    updatedAt : DateTime
+    createdBy : String
+    updatedBy : String
+}
+
+type DocumentInfo {
+    id : UUID
+    parentId : UUID
     type : DocumentType
     contentType : String
     name : String

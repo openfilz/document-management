@@ -826,4 +826,9 @@ public class DocumentServiceImpl implements DocumentService {
                 });
     }
 
+    @Override
+    public Mono<Long> countFolderElements(UUID folderId, Authentication authentication) {
+        return folderId == null ? documentRepository.countDocumentByParentIdIsNull() : documentRepository.countDocumentByParentIdEquals(folderId);
+    }
+
 }
