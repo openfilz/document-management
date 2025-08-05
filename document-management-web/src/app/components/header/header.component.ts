@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
 import { FormsModule } from '@angular/forms';
+import { ElementInfo } from '../../models/document.models';
 
 @Component({
   selector: 'app-header',
@@ -25,7 +26,7 @@ import { FormsModule } from '@angular/forms';
   ],
 })
 export class HeaderComponent {
-  @Input() currentPath = 'Home';
+  @Input() breadcrumbs: ElementInfo[] = [];
   @Input() hasSelection = false;
   @Input() selectedCount = 0;
   @Output() uploadFiles = new EventEmitter<void>();
@@ -34,6 +35,7 @@ export class HeaderComponent {
   @Output() viewModeChange = new EventEmitter<'grid' | 'list'>();
   @Output() downloadSelected = new EventEmitter<void>();
   @Output() deleteSelected = new EventEmitter<void>();
+  @Output() breadcrumbClick = new EventEmitter<ElementInfo>();
 
   searchQuery = '';
 
@@ -59,5 +61,9 @@ export class HeaderComponent {
 
   onDeleteSelected() {
     this.deleteSelected.emit();
+  }
+
+  onBreadcrumbClick(item: ElementInfo) {
+    this.breadcrumbClick.emit(item);
   }
 }

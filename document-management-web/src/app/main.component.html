@@ -2,7 +2,7 @@
   <app-sidebar (navigationClick)="onSidebarNavigation($event)"></app-sidebar>
   
   <app-header
-    [currentPath]="getCurrentPath()"
+    [breadcrumbs]="breadcrumbs"
     [hasSelection]="hasSelectedItems"
     [selectedCount]="selectedItems.length"
     (uploadFiles)="onUploadFiles()"
@@ -10,7 +10,8 @@
     (search)="onSearch($event)"
     (viewModeChange)="onViewModeChange($event)"
     (downloadSelected)="onDownloadSelected()"
-    (deleteSelected)="onDeleteSelected()">
+    (deleteSelected)="onDeleteSelected()"
+    (breadcrumbClick)="onNavigate($event)">
   </app-header>
 
   <div class="main-content"

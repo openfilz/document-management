@@ -87,13 +87,6 @@ export class MainComponent implements OnInit {
     return this.items.filter(item => item.selected);
   }
 
-  getCurrentPath(): string {
-    if (this.currentSection === 'home') {
-      return this.breadcrumbs.length > 0 ? this.breadcrumbs[this.breadcrumbs.length - 1].name : 'Home';
-    }
-    return this.currentSection.charAt(0).toUpperCase() + this.currentSection.slice(1);
-  }
-
   onSidebarNavigation(section: string) {
     this.currentSection = section;
     if (section === 'home') {
