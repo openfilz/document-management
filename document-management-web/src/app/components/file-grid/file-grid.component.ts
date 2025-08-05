@@ -22,8 +22,7 @@ import {DragDropDirective} from "../../directives/drag-drop.directive";
     MatButtonModule,
     MatCheckboxModule,
     MatMenuModule,
-    MatDivider,
-    DragDropDirective
+    MatDivider
   ],
 })
 export class FileGridComponent {
