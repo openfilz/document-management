@@ -3,6 +3,8 @@ import {CommonModule} from '@angular/common';
 import {MatDialog, MatDialogModule} from '@angular/material/dialog';
 import {MatSnackBar, MatSnackBarModule} from '@angular/material/snack-bar';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
+import {MatIcon} from "@angular/material/icon";
+import {MatPaginatorModule, PageEvent} from "@angular/material/paginator";
 
 import {SidebarComponent} from './components/sidebar/sidebar.component';
 import {HeaderComponent} from './components/header/header.component';
@@ -11,6 +13,7 @@ import {FileListComponent} from './components/file-list/file-list.component';
 import {UploadZoneComponent} from './components/upload-zone/upload-zone.component';
 import {CreateFolderDialogComponent} from './dialogs/create-folder-dialog/create-folder-dialog.component';
 import {RenameDialogComponent, RenameDialogData} from './dialogs/rename-dialog/rename-dialog.component';
+import {SettingsDialogComponent, SettingsDialogData} from './dialogs/settings-dialog/settings-dialog.component';
 
 import {DocumentApiService} from './services/document-api.service';
 import {FileIconService} from './services/file-icon.service';
@@ -24,7 +27,8 @@ import {
   RenameRequest,
   Root
 } from './models/document.models';
-import {MatIcon} from "@angular/material/icon";
+
+import {DragDropDirective} from "./directives/drag-drop.directive";
 
 @Component({
   selector: 'app-main',
@@ -41,18 +45,25 @@ import {MatIcon} from "@angular/material/icon";
     FileGridComponent,
     FileListComponent,
     UploadZoneComponent,
-    MatIcon
+    MatIcon,
+    DragDropDirective,
+    MatPaginatorModule,
+    SettingsDialogComponent
   ],
 })
 export class MainComponent implements OnInit {
   viewMode: 'grid' | 'list' = 'grid';
   loading = false;
   showUploadZone = false;
-  
+
   items: FileItem[] = [];
   breadcrumbs: ElementInfo[] = [];
   currentFolder?: FileItem;
   currentSection = 'home';
+
+  totalItems = 0;
+  pageSize = 70;
+  pageIndex = 0;
 
   constructor(
     private documentApi: DocumentApiService,
@@ -62,6 +73,10 @@ export class MainComponent implements OnInit {
   ) {}
 
   ngOnInit() {
+    const storedItemsPerPage = localStorage.getItem('itemsPerPage');
+    if (storedItemsPerPage) {
+      this.pageSize = parseInt(storedItemsPerPage, 10);
+    }
     this.loadFolder();
   }
 
@@ -96,8 +111,24 @@ export class MainComponent implements OnInit {
     this.loading = true;
     this.currentFolder = folder;
 
-    this.documentApi.listFolder(this.currentFolder?.id).subscribe({
+    this.documentApi.countItems(this.currentFolder?.id).subscribe({
+      next: (count) => {
+        this.totalItems = count;
+        this.loadItems();
+      },
+      error: (error) => {
+        //console.error('Failed to count items:', error);
+        this.snackBar.open('Failed to count items in folder', 'Close', { duration: 3000 });
+        this.loading = false;
+      }
+    });
+  }
+
+  loadItems() {
+    this.loading = true;
+    this.documentApi.listFolder(this.currentFolder?.id, this.pageIndex + 1, this.pageSize).subscribe({
       next: (response: ElementInfo[]) => {
+        //console.log("loadItems " + response);
         this.items = response.map(item => ({
           ...item,
           selected: false,
@@ -105,14 +136,20 @@ export class MainComponent implements OnInit {
         }));
         this.showUploadZone = this.items.length === 0;
         this.loading = false;
-        this.updateBreadcrumbs(folder);
+        this.updateBreadcrumbs(this.currentFolder);
       },
       error: (error) => {
-        console.error('Failed to load folder:', error);
+        //console.error('Failed to load folder:', error);
         this.snackBar.open('Failed to load folder contents', 'Close', { duration: 3000 });
         this.loading = false;
       }
     });
+  }
+
+  onPageChange(event: PageEvent) {
+    this.pageIndex = event.pageIndex;
+    this.pageSize = event.pageSize;
+    this.loadItems();
   }
 
   updateBreadcrumbs(folder?: FileItem) {
@@ -157,7 +194,7 @@ export class MainComponent implements OnInit {
             this.loadFolder(this.currentFolder);
           },
           error: (error) => {
-            console.error('Failed to create folder:', error);
+            //console.error('Failed to create folder:', error);
             this.snackBar.open('Failed to create folder', 'Close', { duration: 3000 });
           }
         });
@@ -183,18 +220,23 @@ export class MainComponent implements OnInit {
   }
 
   private handleFileUpload(files: FileList) {
-    Array.from(files).forEach(file => {
-      this.documentApi.uploadDocument(file, this.currentFolder?.id).subscribe({
-        next: () => {
-          this.snackBar.open(`${file.name} uploaded successfully`, 'Close', { duration: 3000 });
-          this.loadFolder(this.currentFolder);
-        },
-        error: (error) => {
-          console.error(`Failed to upload ${file.name}:`, error);
-          this.snackBar.open(`Failed to upload ${file.name}`, 'Close', { duration: 3000 });
-        }
-      });
+    this.documentApi.uploadMultipleDocuments(Array.from(files), this.currentFolder?.id).subscribe({
+      next: (item) => {
+        //console.log("Successfully uploaded", item);
+      },
+      error: (error) => {
+        //console.error(`Failed to upload files:`, error);
+        this.snackBar.open(`Failed to upload files`, 'Close', { duration: 3000 });
+      },
+      complete: () => {
+        this.snackBar.open(`Files uploaded successfully`, 'Close', { duration: 3000 });
+        this.loadFolder(this.currentFolder);
+      }
     });
+  }
+
+  onFilesDropped(files: FileList) {
+    this.handleFileUpload(files);
   }
 
   onItemClick(item: FileItem) {
@@ -227,8 +269,8 @@ export class MainComponent implements OnInit {
     dialogRef.afterClosed().subscribe(newName => {
       if (newName) {
         const request: RenameRequest = { newName };
-        
-        const renameObservable = item.type === 'FOLDER' 
+
+        const renameObservable = item.type === 'FOLDER'
           ? this.documentApi.renameFolder(item.id, request)
           : this.documentApi.renameFile(item.id, request);
 
@@ -238,7 +280,7 @@ export class MainComponent implements OnInit {
             this.loadFolder(this.currentFolder);
           },
           error: (error) => {
-            console.error('Failed to rename item:', error);
+            //console.error('Failed to rename item:', error);
             this.snackBar.open('Failed to rename item', 'Close', { duration: 3000 });
           }
         });
@@ -260,7 +302,7 @@ export class MainComponent implements OnInit {
           window.URL.revokeObjectURL(url);
         },
         error: (error) => {
-          console.error('Failed to download file:', error);
+          //console.error('Failed to download file:', error);
           this.snackBar.open('Failed to download file', 'Close', { duration: 3000 });
         }
       });
@@ -301,7 +343,7 @@ export class MainComponent implements OnInit {
           window.URL.revokeObjectURL(url);
         },
         error: (error) => {
-          console.error('Failed to download files:', error);
+          //console.error('Failed to download files:', error);
           this.snackBar.open('Failed to download files', 'Close', { duration: 3000 });
         }
       });
@@ -327,11 +369,11 @@ export class MainComponent implements OnInit {
     const files = items.filter(item => item.type === 'FILE');
 
     const deleteObservables = [];
-    
+
     if (folders.length > 0) {
       deleteObservables.push(this.documentApi.deleteFolders({ documentIds: folders.map(f => f.id) }));
     }
-    
+
     if (files.length > 0) {
       deleteObservables.push(this.documentApi.deleteFiles({ documentIds: files.map(f => f.id) }));
     }
@@ -343,7 +385,7 @@ export class MainComponent implements OnInit {
           this.loadFolder(this.currentFolder);
         },
         error: (error) => {
-          console.error('Failed to delete items:', error);
+          //console.error('Failed to delete items:', error);
           this.snackBar.open('Failed to delete items', 'Close', { duration: 3000 });
         }
       });
@@ -363,5 +405,20 @@ export class MainComponent implements OnInit {
       // TODO: Implement search functionality
       this.snackBar.open('Search functionality coming soon', 'Close', { duration: 3000 });
     }
+  }
+
+  onSettingsClick() {
+    const dialogRef = this.dialog.open(SettingsDialogComponent, {
+      width: '400px',
+      data: { itemsPerPage: this.pageSize } as SettingsDialogData
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result !== undefined && result !== this.pageSize) {
+        this.pageSize = result;
+        this.pageIndex = 0; // Reset to first page when items per page changes
+        this.loadFolder(this.currentFolder);
+      }
+    });
   }
 }

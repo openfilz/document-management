@@ -13,19 +13,16 @@
     (deleteSelected)="onDeleteSelected()">
   </app-header>
 
-  <div class="main-content">
+  <div class="main-content"
+       appDragDrop
+       (filesDropped)="onFilesDropped($event)">
     @if(!loading) {
-        @if(showUploadZone) {
-            <app-upload-zone
-                    (filesSelected)="onFilesSelected($event)">
-            </app-upload-zone>
-        }
-        @if(!showUploadZone && items.length === 0) {
+        @if(items.length === 0) {
             <div class="empty-state">
                 <div class="empty-content">
                     <mat-icon class="empty-icon">folder_open</mat-icon>
                     <h3>This folder is empty</h3>
-                    <p>Upload files or create a new folder to get started</p>
+                    <p>Drop files here or create a new folder to get started</p>
                 </div>
             </div>
         }
@@ -64,4 +61,14 @@
         </div>
     }
   </div>
+  <mat-paginator
+    [length]="totalItems"
+    [pageSize]="pageSize"
+    [pageIndex]="pageIndex"
+    (page)="onPageChange($event)"
+    aria-label="Select page">
+  </mat-paginator>
+  <button mat-icon-button class="settings-button" (click)="onSettingsClick()">
+    <mat-icon>settings_applications</mat-icon>
+  </button>
 </div>

@@ -3,6 +3,7 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideHttpClient } from '@angular/common/http';
 import { MainComponent } from './app/main.component';
+import { graphqlProvider } from './app/graphql.provider';
 
 @Component({
   selector: 'app-root',
@@ -15,6 +16,7 @@ export class App {}
 bootstrapApplication(App, {
   providers: [
     provideAnimations(),
-    provideHttpClient()
+    provideHttpClient(),
+    ...graphqlProvider
   ]
 });

@@ -1,9 +1,19 @@
+.file-grid-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+  margin-left: 1rem;
+}
+
 .file-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 16px;
   padding: 24px;
   background-color: #f8f9fa;
+  flex-grow: 1;
+  overflow-y: auto;
 }
 
 .file-item {
@@ -115,6 +125,60 @@
   color: #6c757d;
 }
 
+.file-grid-container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  position: relative;
+  margin-left: 1rem;
+}
+
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 16px;
+  padding: 24px;
+  background-color: #f8f9fa;
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+mat-paginator {
+    flex-shrink: 0;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+}
+
+.dropzone-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  color: white;
+  text-align: center;
+}
+
+.dropzone-overlay.file-over {
+  display: flex;
+}
+
+.dropzone-message mat-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+}
+
+.dropzone-message p {
+  font-size: 18px;
+  margin-top: 16px;
+}
+
 @media (max-width: 768px) {
   .file-grid {
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
@@ -134,5 +198,8 @@
   
   .file-name {
     font-size: 11px;
+  }
+
+  mat-paginator {
   }
 }

@@ -17,10 +17,7 @@ import java.beans.FeatureDescriptor;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.time.OffsetDateTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.openfilz.dms.entity.DocumentSqlMapping.*;
@@ -57,6 +54,7 @@ public class AbstractDataFetcher {
         List<SelectedField> objectFields = environment.getSelectionSet().getFields();
         return objectFields.stream()
                 .map(field -> DOCUMENT_FIELD_SQL_MAP.get(field.getName()))
+                .filter(Objects::nonNull)
                 .toList();
     }
 

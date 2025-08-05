@@ -1,14 +1,51 @@
 .app-layout {
+  display: flex;
   height: 100vh;
   background-color: #f9fafb;
-  position: relative;
 }
 
 .main-content {
-  margin-left: 180px;
-  margin-top: 64px;
-  min-height: calc(100vh - 64px);
-  background-color: #f9fafb;
+  flex-grow: 1;
+  margin-top: 64px; /* Header height */
+  margin-left: 180px; /* Sidebar width */
+  margin-bottom: 56px; /* Paginator height */
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  height: calc(100vh - 120px); /* Full height - header - paginator */
+}
+
+mat-paginator {
+  position: fixed;
+  bottom: 0;
+  left: 180px; /* Sidebar width */
+  right: 0;
+  z-index: 1000; /* Ensure it's above other content */
+  border-top: 1px solid #e0e0e0;
+}
+
+.settings-button {
+  position: fixed;
+  bottom: 8px;
+  left: 200px; /* Sidebar width + some padding */
+  z-index: 1001;
+  background-color: transparent;
+  color: #2196F3; /* Material Design Blue 500 */
+  border: none;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 60px;
+  }
+
+  mat-paginator {
+    left: 60px;
+  }
+
+  .settings-button {
+    left: 80px;
+  }
 }
 
 .empty-state {
