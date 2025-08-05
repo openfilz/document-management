@@ -44,17 +44,16 @@ import {DragDropDirective} from "./directives/drag-drop.directive";
     HeaderComponent,
     FileGridComponent,
     FileListComponent,
-    UploadZoneComponent,
     MatIcon,
     DragDropDirective,
-    MatPaginatorModule,
-    SettingsDialogComponent
+    MatPaginatorModule
   ],
 })
 export class MainComponent implements OnInit {
   viewMode: 'grid' | 'list' = 'grid';
   loading = false;
   showUploadZone = false;
+  fileOver: boolean = false;
 
   items: FileItem[] = [];
   breadcrumbs: ElementInfo[] = [];
@@ -237,6 +236,10 @@ export class MainComponent implements OnInit {
 
   onFilesDropped(files: FileList) {
     this.handleFileUpload(files);
+  }
+
+  onFileOverChange(isOver: boolean) {
+    this.fileOver = isOver;
   }
 
   onItemClick(item: FileItem) {

@@ -125,24 +125,6 @@
   color: #6c757d;
 }
 
-.file-grid-container {
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
-  position: relative;
-  margin-left: 1rem;
-}
-
-.file-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 16px;
-  padding: 24px;
-  background-color: #f8f9fa;
-  flex-grow: 1;
-  overflow-y: auto;
-}
-
 mat-paginator {
     flex-shrink: 0;
     background: #fff;
@@ -166,17 +148,21 @@ mat-paginator {
 
 .dropzone-overlay.file-over {
   display: flex;
+  background-color: rgba(0, 0, 0, 0.7);
+  background-image: url('https://www.gstatic.com/images/icons/material/system_gm/1x/cloud_upload_white_48dp.png'); /* Placeholder image */
+  background-repeat: no-repeat;
+  background-position: center 40%;
+  flex-direction: column;
+}
+
+.dropzone-message {
+  margin-top: 80px; /* Adjust based on image size */
+  font-size: 24px;
+  font-weight: bold;
 }
 
 .dropzone-message mat-icon {
-  font-size: 48px;
-  width: 48px;
-  height: 48px;
-}
-
-.dropzone-message p {
-  font-size: 18px;
-  margin-top: 16px;
+  display: none; /* Hide the icon when background image is used */
 }
 
 @media (max-width: 768px) {

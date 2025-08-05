@@ -15,7 +15,8 @@
 
   <div class="main-content"
        appDragDrop
-       (filesDropped)="onFilesDropped($event)">
+       (filesDropped)="onFilesDropped($event)"
+       (fileOverChange)="onFileOverChange($event)">
     @if(!loading) {
         @if(items.length === 0) {
             <div class="empty-state">
@@ -29,6 +30,7 @@
         @if(viewMode === 'grid' && items.length > 0) {
             <app-file-grid
                     [items]="items"
+                    [fileOver]="fileOver"
                     (itemClick)="onItemClick($event)"
                     (itemDoubleClick)="onItemDoubleClick($event)"
                     (selectionChange)="onSelectionChange($event)"
@@ -42,6 +44,7 @@
         @if(viewMode === 'list' && items.length > 0) {
             <app-file-list
                     [items]="items"
+                    [fileOver]="fileOver"
                     (itemClick)="onItemClick($event)"
                     (itemDoubleClick)="onItemDoubleClick($event)"
                     (selectionChange)="onSelectionChange($event)"

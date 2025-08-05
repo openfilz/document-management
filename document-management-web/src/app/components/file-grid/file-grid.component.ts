@@ -28,11 +28,8 @@ import {DragDropDirective} from "../../directives/drag-drop.directive";
 })
 export class FileGridComponent {
   @Input() items: FileItem[] = [];
-  
   @Input() fileOver: boolean = false;
 
-  
-  @Output() filesDropped = new EventEmitter<FileList>();
   @Output() itemClick = new EventEmitter<FileItem>();
   @Output() itemDoubleClick = new EventEmitter<FileItem>();
   @Output() selectionChange = new EventEmitter<{ item: FileItem, selected: boolean }>();
@@ -43,12 +40,6 @@ export class FileGridComponent {
   @Output() delete = new EventEmitter<FileItem>();
 
   constructor(private fileIconService: FileIconService) {}
-
-  
-
-  onFilesDropped(files: FileList) {
-    this.filesDropped.emit(files);
-  }
 
   onItemClick(item: FileItem) {
     this.itemClick.emit(item);
