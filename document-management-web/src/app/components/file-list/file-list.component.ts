@@ -26,6 +26,7 @@ import {MatDivider} from "@angular/material/divider";
 })
 export class FileListComponent {
   @Input() items: FileItem[] = [];
+  @Input() fileOver: boolean = false;
   
   @Output() itemClick = new EventEmitter<FileItem>();
   @Output() itemDoubleClick = new EventEmitter<FileItem>();

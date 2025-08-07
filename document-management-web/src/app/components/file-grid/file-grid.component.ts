@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,6 +8,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { FileItem } from '../../models/document.models';
 import { FileIconService } from '../../services/file-icon.service';
 import {MatDivider} from "@angular/material/divider";
+import {DragDropDirective} from "../../directives/drag-drop.directive";
 
 @Component({
   selector: 'app-file-grid',
@@ -26,7 +27,8 @@ import {MatDivider} from "@angular/material/divider";
 })
 export class FileGridComponent {
   @Input() items: FileItem[] = [];
-  
+  @Input() fileOver: boolean = false;
+
   @Output() itemClick = new EventEmitter<FileItem>();
   @Output() itemDoubleClick = new EventEmitter<FileItem>();
   @Output() selectionChange = new EventEmitter<{ item: FileItem, selected: boolean }>();

@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import {map, Observable} from 'rxjs';
+import { Apollo, gql } from 'apollo-angular';
 import {
   ElementInfo,
   DocumentInfo,
@@ -11,9 +12,27 @@ import {
   CopyRequest,
   DeleteRequest,
   UploadResponse,
-  SearchByMetadataRequest
+  SearchByMetadataRequest,
+  MultipleUploadFileParameter,
+  MultipleUploadFileParameterAttributes
 } from '../models/document.models';
 import {environment} from "../../environments/environment";
+
+const LIST_FOLDER_QUERY = gql`
+  query listFolder($request: ListFolderRequest) {
+    listFolder(request: $request) {
+      id
+      type
+      contentType
+      name
+      size
+      createdAt
+      updatedAt
+      createdBy
+      updatedBy
+    }
+  }
+`;
 
 @Injectable({
   providedIn: 'root'
@@ -22,7 +41,7 @@ export class DocumentApiService {
   private readonly baseUrl = environment.apiURL;
   private readonly authToken = 'your-jwt-token-here'; // In real app, get from auth service
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private apollo: Apollo) {}
 
   private getHeaders(): HttpHeaders {
     return new HttpHeaders({
@@ -33,21 +52,38 @@ export class DocumentApiService {
 
   private getMultipartHeaders(): HttpHeaders {
     return new HttpHeaders({
-      'Authorization': `Bearer ${this.authToken}`
+      'Authorization': `Bearer ${this.authToken}`,
+      'Accept': '*/*'
+      //'Content-Type': 'multipart/form-data'
     });
   }
 
   // Folder operations
-  listFolder(folderId?: string, onlyFiles?: boolean, onlyFolders?: boolean): Observable<ElementInfo[]> {
-    let params = new HttpParams();
-    if (folderId) params = params.set('folderId', folderId);
-    if (onlyFiles !== undefined) params = params.set('onlyFiles', onlyFiles.toString());
-    if (onlyFolders !== undefined) params = params.set('onlyFolders', onlyFolders.toString());
+  listFolder(folderId?: string, page: number = 1, pageSize: number = 50): Observable<ElementInfo[]> {
+    //console.log(`listFolder ${folderId} - page ${page}`);
+    const request = {
+      id: folderId,
+      pageInfo: {
+        pageNumber: page,
+        pageSize: pageSize
+      }
+    };
 
-    return this.http.get<ElementInfo[]>(`${this.baseUrl}/folders/list`, {
-      headers: this.getHeaders(),
-      params
-    });
+    return this.apollo.watchQuery<any>({
+      fetchPolicy: 'no-cache',
+      query: LIST_FOLDER_QUERY,
+      variables: { request }
+    }).valueChanges.pipe(
+      map(result => result.data.listFolder)
+    );
+  }
+
+  countItems(folderId?: string): Observable<number> {
+    let params = new HttpParams();
+    if (folderId) {
+      params = params.set('folderId', folderId);
+    }
+    return this.http.get<number>(`${this.baseUrl}/folders/count`, { params });
   }
 
   createFolder(request: CreateFolderRequest): Observable<FolderResponse> {
@@ -144,6 +180,34 @@ export class DocumentApiService {
     }
 
     return this.http.post<UploadResponse>(`${this.baseUrl}/documents/upload`, formData, {
+      headers: this.getMultipartHeaders(),
+      params
+    });
+  }
+
+  uploadMultipleDocuments(files: File[], parentFolderId?: string, allowDuplicateFileNames?: boolean): Observable<UploadResponse> {
+    const formData = new FormData();
+    const parametersByFilename: MultipleUploadFileParameter[] = [];
+    files.forEach(file => {
+      formData.append('file', file, file.name);
+      parametersByFilename.push({
+        filename: file.name,
+        fileAttributes: {
+          parentFolderId: parentFolderId
+        }
+      });
+    });
+    if (parentFolderId) {
+      formData.append('parametersByFilename', new Blob([JSON.stringify(parametersByFilename)], {type: 'application/json'}));
+    }
+
+
+    let params = new HttpParams();
+    if (allowDuplicateFileNames !== undefined) {
+      params = params.set('allowDuplicateFileNames', allowDuplicateFileNames.toString());
+    }
+
+    return this.http.post<UploadResponse>(`${this.baseUrl}/documents/upload-multiple`, formData, {
       headers: this.getMultipartHeaders(),
       params
     });

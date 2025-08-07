@@ -67,6 +67,16 @@ export interface FileItem extends ElementInfo {
   icon?: string;
 }
 
+export interface MultipleUploadFileParameter {
+  filename: string;
+  fileAttributes: MultipleUploadFileParameterAttributes;
+}
+
+export interface MultipleUploadFileParameterAttributes {
+  parentFolderId?: string;
+  metadata?: { [key: string]: any };
+}
+
 export class Root implements ElementInfo {
 
   public static INSTANCE = new Root();

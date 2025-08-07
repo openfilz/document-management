@@ -29,7 +29,7 @@
             "assets": ["src/favicon.ico"],
             "index": "src/index.html",
             "browser": "src/main.ts",
-            "outputPath": "dist/demo",
+            "outputPath": "dist",
             "polyfills": ["zone.js"],
             "scripts": [],
             "styles": [

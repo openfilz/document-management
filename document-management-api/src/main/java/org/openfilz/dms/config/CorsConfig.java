@@ -33,6 +33,8 @@ public class CorsConfig implements WebFluxConfigurer {
                         HttpMethod.DELETE.name());
         corsRegistry.addMapping(graphQlBaseUrl + "/**")
                 .allowedOrigins(allowedOrigins)
-                .allowedMethods(HttpMethod.POST.name());
+                .allowedMethods(HttpMethod.POST.name(),
+                        HttpMethod.OPTIONS.name())
+        ;
     }
 }

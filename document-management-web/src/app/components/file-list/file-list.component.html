@@ -88,4 +88,10 @@
         [class.selected]="row.selected"
         class="file-row"></tr>
   </table>
+  <div class="dropzone-overlay" [class.file-over]="fileOver">
+    <div class="dropzone-message">
+      <mat-icon>cloud_upload</mat-icon>
+      <p>Drop files here to upload</p>
+    </div>
+  </div>
 </div>

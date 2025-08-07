@@ -2,7 +2,21 @@
   <div class="header-left">
     <div class="breadcrumb">
       <mat-icon class="breadcrumb-icon">home</mat-icon>
-      <span class="breadcrumb-text">{{ currentPath }}</span>
+      @if (breadcrumbs.length === 0) {
+        <span class="breadcrumb-item current">Home</span>
+      } @else {
+        @for (crumb of breadcrumbs; track crumb.id; let last = $last) {
+          <span 
+            class="breadcrumb-item" 
+            [class.current]="last"
+            (click)="onBreadcrumbClick(crumb)">
+            {{ crumb.name }}
+          </span>
+          @if (!last) {
+            <span class="separator">/</span>
+          }
+        }
+      }
     </div>
   </div>
 
