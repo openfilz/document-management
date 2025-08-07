@@ -69,10 +69,8 @@
     [length]="totalItems"
     [pageSize]="pageSize"
     [pageIndex]="pageIndex"
+    [pageSizeOptions]="[5, 10, 25, 50, 75, 100]"
     (page)="onPageChange($event)"
     aria-label="Select page">
   </mat-paginator>
-  <button mat-icon-button class="settings-button" (click)="onSettingsClick()">
-    <mat-icon>settings_applications</mat-icon>
-  </button>
 </div>
