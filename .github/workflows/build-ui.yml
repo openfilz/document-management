@@ -4,7 +4,7 @@ on:
   push:
     branches: [ "develop" ]
     paths:
-      - '/document-management-web/**'
+      - 'document-management-web/**'
 
 
 jobs:

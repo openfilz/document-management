@@ -5,7 +5,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "demo": {
+    "openfilz-ui": {
       "architect": {
         "build": {
           "builder": "@angular/build:application",
@@ -29,7 +29,7 @@
             "assets": ["src/favicon.ico"],
             "index": "src/index.html",
             "browser": "src/main.ts",
-            "outputPath": "dist",
+            "outputPath": "dist/openfilz-ui",
             "polyfills": ["zone.js"],
             "scripts": [],
             "styles": [
@@ -43,10 +43,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "development": {
-              "buildTarget": "demo:build:development"
+              "buildTarget": "openfilz-ui:build:development"
             },
             "production": {
-              "buildTarget": "demo:build:production"
+              "buildTarget": "openfilz-ui:build:production"
             }
           },
           "defaultConfiguration": "development"
