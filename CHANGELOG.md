@@ -4,20 +4,21 @@
 **[maven-release-plugin] prepare for next development iteration**
 
 
-[cd7db686b928941](https://github.com/openfilz/document-management/commit/cd7db686b928941) maven-release-bot[bot] *2025-08-02 22:43:50*
+[ce26b2261d7fbfc](https://github.com/openfilz/document-management/commit/ce26b2261d7fbfc) maven-release-bot[bot] *2025-08-07 13:09:11*
 
 
-## v1.0.48
+## v1.0.49
 ### No issue
 
-**[maven-release-plugin] prepare release v1.0.48**
+**[maven-release-plugin] prepare release v1.0.49**
 
 
-[1fa7e2fc1c0a439](https://github.com/openfilz/document-management/commit/1fa7e2fc1c0a439) maven-release-bot[bot] *2025-08-02 22:43:49*
+[ccb32a3b054e1b1](https://github.com/openfilz/document-management/commit/ccb32a3b054e1b1) maven-release-bot[bot] *2025-08-07 13:09:09*
 
-**New GraphQL query : documentById**
+**Merge pull request #80 from openfilz/develop**
 
+ * Develop
 
-[ba2c8441902344d](https://github.com/openfilz/document-management/commit/ba2c8441902344d) Yann Demel *2025-08-02 22:43:02*
+[6d47a2b4e36441c](https://github.com/openfilz/document-management/commit/6d47a2b4e36441c) Yann Demel *2025-08-07 13:08:22*
 
 
