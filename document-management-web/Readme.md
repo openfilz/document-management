@@ -15,3 +15,4 @@ To build the Docker image :
 docker build -t ghcr.io/openfilz/document-management-web:latest .
 
 Run docker pull ghcr.io/openfilz/document-management-web:latest to get the latest Docker image
+
