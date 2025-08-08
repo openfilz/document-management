@@ -108,6 +108,7 @@ export class MainComponent implements OnInit {
     this.documentApi.countItems(this.currentFolder?.id).subscribe({
       next: (count) => {
         this.totalItems = count;
+        this.pageIndex = 0;
         this.loadItems();
       },
       error: (error) => {
