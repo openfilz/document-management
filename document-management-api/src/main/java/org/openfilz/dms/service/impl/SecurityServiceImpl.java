@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.openfilz.dms.config.RestApiVersion;
 import org.openfilz.dms.enums.Role;
 import org.openfilz.dms.enums.RoleTokenLookup;
+import org.openfilz.dms.utils.FileConstants;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.core.Authentication;
@@ -60,7 +61,7 @@ public class SecurityServiceImpl extends AbstractSecurityService {
     private boolean isInGroups(JwtAuthenticationToken auth, Role[] requiredRoles) {
         List<String> groups = (List<String>) auth.getTokenAttributes().get(GROUPS);
         if(groups != null && !groups.isEmpty()) {
-            return groups.stream().filter(g->g.startsWith(SLASH + rootGroupName + SLASH))
+            return groups.stream().filter(g->g.startsWith(FileConstants.SLASH + rootGroupName + FileConstants.SLASH))
                     .map(g->g.substring(rootGroupName.length() + 2))
                     .anyMatch(g -> Arrays.stream(requiredRoles).anyMatch(r->r.toString().equals(g)));
         }

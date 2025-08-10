@@ -12,6 +12,7 @@ import org.openfilz.dms.dto.audit.*;
 import org.openfilz.dms.dto.request.*;
 import org.openfilz.dms.dto.response.*;
 import org.openfilz.dms.entity.Document;
+import org.openfilz.dms.entity.PhysicalDocument;
 import org.openfilz.dms.enums.AuditAction;
 import org.openfilz.dms.enums.DocumentType;
 import org.openfilz.dms.exception.DocumentNotFoundException;
@@ -48,6 +49,7 @@ import java.util.UUID;
 import static org.openfilz.dms.enums.AuditAction.*;
 import static org.openfilz.dms.enums.DocumentType.FILE;
 import static org.openfilz.dms.enums.DocumentType.FOLDER;
+import static org.openfilz.dms.utils.FileConstants.SLASH;
 
 @Slf4j
 @Service
@@ -198,12 +200,42 @@ public class DocumentServiceImpl implements DocumentService {
     public Mono<Resource> downloadDocument(UUID documentId, Authentication auth) {
         return documentRepository.findById(documentId)
                 .switchIfEmpty(Mono.error(new DocumentNotFoundException(documentId)))
-                .filter(doc -> doc.getType() == FILE) // Ensure it's a file
-                .switchIfEmpty(Mono.error(new OperationForbiddenException("Cannot download a folder directly. ID: " + documentId)))
-                .flatMap(document -> storageService.loadFile(document.getStoragePath()))
-                .flatMap(r -> UserPrincipalExtractor.getConnectedUser(auth).flatMap(username -> auditService.logAction(username, AuditAction.DOWNLOAD_DOCUMENT, FILE, documentId)).thenReturn(r));
+                .flatMap(doc -> doc.getType() == FILE ?
+                        storageService.loadFile(doc.getStoragePath())
+                        : zipFolder(documentDAO.getChildren(documentId)))
+                .flatMap(r ->
+                        UserPrincipalExtractor.getConnectedUser(auth)
+                                .flatMap(username ->
+                                        auditService.logAction(username, AuditAction.DOWNLOAD_DOCUMENT, FILE, documentId))
+                                .thenReturn(r));
     }
 
+    private Mono<? extends Resource> zipFolder(Flux<ChildElementInfo> children) {
+        try {
+            PipedInputStream pipedInputStream = new PipedInputStream();
+            PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
+            ZipArchiveOutputStream zos = new ZipArchiveOutputStream(pipedOutputStream);
+            children.concatMap(element -> addDocumentToZip(element, zos))
+                    .then()
+                    .doOnTerminate(() -> closeOutputStream(zos))
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .subscribe(
+                            null,
+                            error -> log.error("Error during zip creation", error)
+                    );
+
+            return Mono.just(new InputStreamResource(pipedInputStream));
+        } catch (IOException e) {
+            return Mono.error(new StorageException("Failed to create piped stream", e));
+        }
+    }
+
+    private Mono<Void> addDocumentToZip(ChildElementInfo element, ZipArchiveOutputStream zos) {
+        if(element.getType().equals(FILE)) {
+            return addFileToZip(element, element.getPath(), zos);
+        }
+        return addFolderToZip(element, zos);
+    }
 
     @Override
     @Transactional
@@ -695,8 +727,7 @@ public class DocumentServiceImpl implements DocumentService {
                 PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
                 ZipArchiveOutputStream zos = new ZipArchiveOutputStream(pipedOutputStream);
 
-                documentRepository.findByIdIn(documentIds)
-                    .filter(doc -> doc.getType() == FILE)
+                documentDAO.getElementsAndChildren(documentIds)
                     .collectList()
                     .flatMap(docs -> {
                         if (docs.isEmpty()) {
@@ -706,7 +737,7 @@ public class DocumentServiceImpl implements DocumentService {
                             log.warn("Some requested documents were not files or not found. Zipping available files.");
                         }
                         return Flux.fromIterable(docs)
-                            .concatMap(doc -> addToZip(doc, zos))
+                            .concatMap(doc ->  addDocumentToZip(doc, zos))
                             .then();
                     })
                     .doOnTerminate(() -> closeOutputStream(zos))
@@ -731,7 +762,18 @@ public class DocumentServiceImpl implements DocumentService {
         }
     }
 
-    private Mono<Void> addToZip(Document doc, ZipArchiveOutputStream zos) {
+    private Mono<Void> addFolderToZip(ChildElementInfo folderElement, ZipArchiveOutputStream zos) {
+        try {
+            ZipArchiveEntry zipEntry = new ZipArchiveEntry(folderElement.getPath() + SLASH);
+            zos.putArchiveEntry(zipEntry);
+            zos.closeArchiveEntry();
+            return Mono.empty();
+        } catch (IOException ioe) {
+            return Mono.error(new StorageException(ioe.getMessage()));
+        }
+    }
+
+    private Mono<Void> addFileToZip(PhysicalDocument doc, String path, ZipArchiveOutputStream zos) {
         return storageService.loadFile(doc.getStoragePath())
                 .flatMap(resource -> {
                     if (resource == null || !resource.exists()) {
@@ -739,15 +781,19 @@ public class DocumentServiceImpl implements DocumentService {
                         return Mono.empty();
                     }
                     try {
-                        ZipArchiveEntry zipEntry = new ZipArchiveEntry(doc.getName());
+                        ZipArchiveEntry zipEntry = new ZipArchiveEntry(path == null ? doc.getName() : path);
                         zipEntry.setSize(doc.getSize() != null ? doc.getSize() : resource.contentLength());
+                        //log.debug("putArchiveEntry {}",  zipEntry.getName());
                         zos.putArchiveEntry(zipEntry);
                         try (InputStream is = resource.getInputStream()) {
                             is.transferTo(zos);
+                        } finally {
+                            zos.closeArchiveEntry();
                         }
-                        zos.closeArchiveEntry();
+                        //log.debug("closeArchiveEntry {}",  zipEntry.getName());
                         return Mono.empty();
                     } catch (IOException ioe) {
+                        log.error("Exception in addFileToZip", ioe);
                         return Mono.error(new StorageException(ioe.getMessage()));
                     }
                 });

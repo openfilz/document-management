@@ -50,6 +50,7 @@ import {DragDropDirective} from "./directives/drag-drop.directive";
   ],
 })
 export class MainComponent implements OnInit {
+  static itemsPerPage = 'itemsPerPage';
   viewMode: 'grid' | 'list' = 'grid';
   loading = false;
   showUploadZone = false;
@@ -72,7 +73,8 @@ export class MainComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    const storedItemsPerPage = localStorage.getItem('itemsPerPage');
+
+    const storedItemsPerPage = localStorage.getItem(MainComponent.itemsPerPage);
     if (storedItemsPerPage) {
       this.pageSize = parseInt(storedItemsPerPage, 10);
     }
@@ -106,6 +108,7 @@ export class MainComponent implements OnInit {
     this.documentApi.countItems(this.currentFolder?.id).subscribe({
       next: (count) => {
         this.totalItems = count;
+        this.pageIndex = 0;
         this.loadItems();
       },
       error: (error) => {
@@ -141,6 +144,9 @@ export class MainComponent implements OnInit {
   onPageChange(event: PageEvent) {
     this.pageIndex = event.pageIndex;
     this.pageSize = event.pageSize;
+    if(event.pageSize) {
+      localStorage.setItem(MainComponent.itemsPerPage, String(event.pageSize));
+    }
     this.loadItems();
   }
 
@@ -285,24 +291,22 @@ export class MainComponent implements OnInit {
   }
 
   onDownloadItem(item: FileItem) {
-    if (item.type === 'FILE') {
-      this.documentApi.downloadDocument(item.id).subscribe({
-        next: (blob) => {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = item.name;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-        },
-        error: (error) => {
-          //console.error('Failed to download file:', error);
-          this.snackBar.open('Failed to download file', 'Close', { duration: 3000 });
-        }
-      });
-    }
+    this.documentApi.downloadDocument(item.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.name + ((item.type == 'FILE' ? '' : '.zip'));
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (error) => {
+        //console.error('Failed to download file:', error);
+        this.snackBar.open('Failed to download file', 'Close', { duration: 3000 });
+      }
+    });
   }
 
   onMoveItem(item: FileItem) {
@@ -401,20 +405,5 @@ export class MainComponent implements OnInit {
       // TODO: Implement search functionality
       this.snackBar.open('Search functionality coming soon', 'Close', { duration: 3000 });
     }
-  }
-
-  onSettingsClick() {
-    const dialogRef = this.dialog.open(SettingsDialogComponent, {
-      width: '400px',
-      data: { itemsPerPage: this.pageSize } as SettingsDialogData
-    });
-
-    dialogRef.afterClosed().subscribe(result => {
-      if (result !== undefined && result !== this.pageSize) {
-        this.pageSize = result;
-        this.pageIndex = 0; // Reset to first page when items per page changes
-        this.loadFolder(this.currentFolder);
-      }
-    });
   }
 }

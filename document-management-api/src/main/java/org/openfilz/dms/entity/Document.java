@@ -19,7 +19,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Table("documents")
-public class Document implements DocumentSqlMapping {
+public class Document implements DocumentSqlMapping, PhysicalDocument {
 
     @Id
     @Column(ID)

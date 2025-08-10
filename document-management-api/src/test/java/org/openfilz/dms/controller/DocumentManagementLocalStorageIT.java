@@ -971,8 +971,9 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
     }
 
     @Test
-    void whenDownloadFolder_thenError() {
-        CreateFolderRequest createFolderRequest = new CreateFolderRequest("whenDownloadFolder_thenError", null);
+    void whenDownloadFolder_thenOK() throws IOException {
+        String folderName = "whenDownloadFolder_thenOK";
+        CreateFolderRequest createFolderRequest = new CreateFolderRequest(folderName, null);
 
         FolderResponse folder = webTestClient.post().uri(RestApiVersion.API_PREFIX + "/folders")
                 .body(BodyInserters.fromValue(createFolderRequest))
@@ -981,9 +982,32 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
                 .expectBody(FolderResponse.class)
                 .returnResult().getResponseBody();
 
-        webTestClient.get().uri(RestApiVersion.API_PREFIX + "/documents/{id}/download", folder.id())
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        ClassPathResource file1 = new ClassPathResource("schema.sql");
+        ClassPathResource file2 = new ClassPathResource("test.txt");
+        builder.part("file", file1);
+        builder.part("file", file2);
+
+        MultipleUploadFileParameter param1 = new MultipleUploadFileParameter("schema.sql", new MultipleUploadFileParameterAttributes(folder.id(), null));
+        MultipleUploadFileParameter param2 = new MultipleUploadFileParameter("test.txt", new MultipleUploadFileParameterAttributes(folder.id(), null));
+
+        List<UploadResponse> uploadResponse = getUploadMultipleDocumentExchange(param1, param2, builder)
+                .expectStatus().isOk()
+                .expectBody(new ParameterizedTypeReference<List<UploadResponse>>() {})
+                .returnResult().getResponseBody();
+
+        Assertions.assertNotNull(uploadResponse);
+
+        Resource resource = webTestClient.get().uri(RestApiVersion.API_PREFIX + "/documents/{id}/download", folder.id())
                 .exchange()
-                .expectStatus().is4xxClientError();
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .expectBody(Resource.class)
+                .returnResult().getResponseBody();
+        Assertions.assertNotNull(resource);
+        Assertions.assertEquals(folderName + ".zip", resource.getFilename());
+
+        checkFilesInZip(resource, file1, file2);
     }
 
     @Test
@@ -1043,8 +1067,13 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         Assertions.assertNotNull(resource);
         Assertions.assertEquals("documents.zip", resource.getFilename());
 
+        checkFilesInZip(resource, file1, file2);
+
+    }
+
+    private void checkFilesInZip(Resource downloadedFile, ClassPathResource file1, ClassPathResource file2) throws IOException {
         Path targetFolder = Files.createTempDirectory(UUID.randomUUID().toString());
-        unzip(resource, targetFolder);
+        unzip(downloadedFile, targetFolder);
         int n = 0;
         int k = 0;
 
@@ -1073,7 +1102,6 @@ public class DocumentManagementLocalStorageIT extends TestContainersBaseConfig {
         }
         Assertions.assertEquals(2, n);
         Assertions.assertEquals(0, k);
-
     }
 
     public static void unzip(final Resource zipFile, final Path targetFolder) throws IOException {
