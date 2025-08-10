@@ -24,7 +24,6 @@ import org.springframework.security.core.Authentication;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -59,7 +58,6 @@ class DocumentControllerTest {
     void uploadDocument_Success() {
         UUID documentId = UUID.randomUUID();
         String filename = "test.txt";
-        Map<String, Object> metadata = new HashMap<>();
         UUID parentId = UUID.randomUUID();
 
         when(documentService.uploadDocument(any(), any(), any(), any(), any(), any()))

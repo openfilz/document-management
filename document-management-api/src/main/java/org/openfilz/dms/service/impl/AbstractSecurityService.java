@@ -1,13 +1,12 @@
 package org.openfilz.dms.service.impl;
 
 import org.openfilz.dms.service.SecurityService;
+import org.openfilz.dms.utils.FileConstants;
 import org.springframework.http.HttpMethod;
 
 import java.util.Arrays;
 
 public abstract class AbstractSecurityService implements SecurityService {
-
-    public static final String SLASH = "/";
 
     protected final boolean isWriteAccess(HttpMethod method, String path) {
         return ((method.equals(HttpMethod.DELETE) || method.equals(HttpMethod.PATCH) || method.equals(HttpMethod.PUT))
@@ -41,7 +40,7 @@ public abstract class AbstractSecurityService implements SecurityService {
     }
 
     private boolean pathStartsWith(String path, String contextPath) {
-        return path.equals(contextPath) || path.startsWith(contextPath + SLASH);
+        return path.equals(contextPath) || path.startsWith(contextPath + FileConstants.SLASH);
     }
 
     protected boolean isGraphQlSearch(String baseUrl, String path) {

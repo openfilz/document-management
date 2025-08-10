@@ -13,9 +13,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openfilz.dms.config.RestApiVersion;
 import org.openfilz.dms.dto.request.*;
-import org.openfilz.dms.dto.response.ElementInfo;
 import org.openfilz.dms.dto.response.DocumentInfo;
+import org.openfilz.dms.dto.response.ElementInfo;
 import org.openfilz.dms.dto.response.UploadResponse;
+import org.openfilz.dms.entity.Document;
 import org.openfilz.dms.service.DocumentService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -35,6 +36,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static org.openfilz.dms.controller.ApiDescription.ALLOW_DUPLICATE_FILE_NAME_PARAM_DESCRIPTION;
+import static org.openfilz.dms.enums.DocumentType.FILE;
 
 @Slf4j
 @RestController
@@ -44,6 +46,7 @@ import static org.openfilz.dms.controller.ApiDescription.ALLOW_DUPLICATE_FILE_NA
 public class DocumentController {
 
     public static final String ATTACHMENT_ZIP = "attachment; filename=\"documents.zip\"";
+    public static final String ZIP = ".zip";
 
     private final DocumentService documentService;
 
@@ -161,12 +164,15 @@ public class DocumentController {
     public Mono<ResponseEntity<Resource>> downloadDocument(@PathVariable UUID documentId, Authentication authentication) {
         return documentService.findDocumentById(documentId) // First get metadata like name
                 .flatMap(docInfo -> documentService.downloadDocument(documentId, authentication)
-                        .map(resource -> ResponseEntity.ok()
-                                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + docInfo.getName() + "\"")
-                                .contentType(MediaType.parseMediaType(docInfo.getContentType() != null ? docInfo.getContentType() : MediaType.APPLICATION_OCTET_STREAM_VALUE))
-                                .body(resource)
-                        )
+                        .map(resource -> sendDownloadResponse(docInfo, resource))
                 );
+    }
+
+    private ResponseEntity<Resource> sendDownloadResponse(Document document, Resource resource) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + document.getName() + (document.getType() == FILE ? "" : ZIP) + "\"")
+                .contentType(document.getType() == FILE && document.getContentType() != null ? MediaType.parseMediaType(document.getContentType()) : MediaType.APPLICATION_OCTET_STREAM)
+                .body(resource);
     }
 
     @PostMapping("/download-multiple")

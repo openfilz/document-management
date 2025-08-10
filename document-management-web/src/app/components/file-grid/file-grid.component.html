@@ -24,12 +24,10 @@
                             <mat-icon>edit</mat-icon>
                             <span>Rename</span>
                         </button>
-                        @if(item.type === 'FILE') {
-                            <button mat-menu-item (click)="onDownload(item)">
-                                <mat-icon>cloud_download</mat-icon>
-                                <span>Download</span>
-                            </button>
-                        }
+                        <button mat-menu-item (click)="onDownload(item)">
+                            <mat-icon>cloud_download</mat-icon>
+                            <span>Download</span>
+                        </button>
                         <button mat-menu-item (click)="onMove(item)">
                             <mat-icon>drive_file_move</mat-icon>
                             <span>Move</span>

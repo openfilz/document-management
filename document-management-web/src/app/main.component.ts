@@ -291,24 +291,22 @@ export class MainComponent implements OnInit {
   }
 
   onDownloadItem(item: FileItem) {
-    if (item.type === 'FILE') {
-      this.documentApi.downloadDocument(item.id).subscribe({
-        next: (blob) => {
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = item.name;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          window.URL.revokeObjectURL(url);
-        },
-        error: (error) => {
-          //console.error('Failed to download file:', error);
-          this.snackBar.open('Failed to download file', 'Close', { duration: 3000 });
-        }
-      });
-    }
+    this.documentApi.downloadDocument(item.id).subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.name + ((item.type == 'FILE' ? '' : '.zip'));
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      },
+      error: (error) => {
+        //console.error('Failed to download file:', error);
+        this.snackBar.open('Failed to download file', 'Close', { duration: 3000 });
+      }
+    });
   }
 
   onMoveItem(item: FileItem) {
