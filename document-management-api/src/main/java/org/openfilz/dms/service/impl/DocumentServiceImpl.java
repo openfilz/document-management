@@ -202,17 +202,12 @@ public class DocumentServiceImpl implements DocumentService {
                 .switchIfEmpty(Mono.error(new DocumentNotFoundException(documentId)))
                 .flatMap(doc -> doc.getType() == FILE ?
                         storageService.loadFile(doc.getStoragePath())
-                                .flatMap(r ->
-                                        UserPrincipalExtractor.getConnectedUser(auth)
-                                                .flatMap(username ->
-                                                        auditService.logAction(username, AuditAction.DOWNLOAD_DOCUMENT, doc.getType(), documentId))
-                                                .thenReturn(r))
-                        : zipFolder(documentDAO.getChildren(documentId))
-                            .flatMap(r ->
-                                    UserPrincipalExtractor.getConnectedUser(auth)
-                                            .flatMap(username ->
-                                                    auditService.logAction(username, AuditAction.DOWNLOAD_DOCUMENT, doc.getType(), documentId))
-                                            .thenReturn(r)));
+                        : zipFolder(documentDAO.getChildren(documentId)))
+                .flatMap(r ->
+                        UserPrincipalExtractor.getConnectedUser(auth)
+                                .flatMap(username ->
+                                        auditService.logAction(username, AuditAction.DOWNLOAD_DOCUMENT, FILE, documentId))
+                                .thenReturn(r));
     }
 
     private Mono<? extends Resource> zipFolder(Flux<ChildElementInfo> children) {
@@ -783,19 +778,22 @@ public class DocumentServiceImpl implements DocumentService {
                 .flatMap(resource -> {
                     if (resource == null || !resource.exists()) {
                         log.warn("Skipping missing file in zip: {}", doc.getName());
+                        return Mono.empty();
                     }
                     try {
                         ZipArchiveEntry zipEntry = new ZipArchiveEntry(path == null ? doc.getName() : path);
                         zipEntry.setSize(doc.getSize() != null ? doc.getSize() : resource.contentLength());
-                        log.debug("putArchiveEntry {}",  zipEntry.getName());
+                        //log.debug("putArchiveEntry {}",  zipEntry.getName());
                         zos.putArchiveEntry(zipEntry);
                         try (InputStream is = resource.getInputStream()) {
                             is.transferTo(zos);
+                        } finally {
+                            zos.closeArchiveEntry();
                         }
-                        log.debug("closeArchiveEntry {}",  zipEntry.getName());
-                        zos.closeArchiveEntry();
+                        //log.debug("closeArchiveEntry {}",  zipEntry.getName());
                         return Mono.empty();
                     } catch (IOException ioe) {
+                        log.error("Exception in addFileToZip", ioe);
                         return Mono.error(new StorageException(ioe.getMessage()));
                     }
                 });
