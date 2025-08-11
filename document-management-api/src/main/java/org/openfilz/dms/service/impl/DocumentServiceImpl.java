@@ -780,22 +780,21 @@ public class DocumentServiceImpl implements DocumentService {
                         log.warn("Skipping missing file in zip: {}", doc.getName());
                         return Mono.empty();
                     }
-                    try {
-                        ZipArchiveEntry zipEntry = new ZipArchiveEntry(path == null ? doc.getName() : path);
-                        zipEntry.setSize(doc.getSize() != null ? doc.getSize() : resource.contentLength());
-                        //log.debug("putArchiveEntry {}",  zipEntry.getName());
-                        zos.putArchiveEntry(zipEntry);
-                        try (InputStream is = resource.getInputStream()) {
-                            is.transferTo(zos);
-                        } finally {
-                            zos.closeArchiveEntry();
+                    return Mono.fromRunnable(() -> {
+                        try {
+                            ZipArchiveEntry zipEntry = new ZipArchiveEntry(path == null ? doc.getName() : path);
+                            zipEntry.setSize(doc.getSize() != null ? doc.getSize() : resource.contentLength());
+                            zos.putArchiveEntry(zipEntry);
+                            try (InputStream is = resource.getInputStream()) {
+                                is.transferTo(zos);
+                            } finally {
+                                zos.closeArchiveEntry();
+                            }
+                        } catch (IOException ioe) {
+                            log.error("Exception in addFileToZip", ioe);
+                            throw new StorageException(ioe.getMessage());
                         }
-                        //log.debug("closeArchiveEntry {}",  zipEntry.getName());
-                        return Mono.empty();
-                    } catch (IOException ioe) {
-                        log.error("Exception in addFileToZip", ioe);
-                        return Mono.error(new StorageException(ioe.getMessage()));
-                    }
+                    }).subscribeOn(Schedulers.boundedElastic()).then();
                 });
     }
 

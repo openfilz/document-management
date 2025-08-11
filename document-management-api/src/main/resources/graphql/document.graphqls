@@ -6,8 +6,9 @@ scalar UUID
 @specifiedBy(url:"https://tools.ietf.org/html/rfc4122")
 
 type Query {
-    listFolder(request: ListFolderRequest): [FolderElementInfo]
+    listFolder(request: ListFolderRequest!): [FolderElementInfo]
     documentById(id: UUID!): DocumentInfo
+    count(request: ListFolderRequest): Long
 }
 
 type FolderElementInfo {
@@ -51,7 +52,7 @@ input ListFolderRequest {
     updatedAtBefore : DateTime
     createdBy : String
     updatedBy : String
-    pageInfo : PageInfo!
+    pageInfo : PageInfo
 }
 
 input PageInfo {

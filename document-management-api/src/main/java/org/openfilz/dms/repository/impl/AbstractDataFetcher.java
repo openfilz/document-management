@@ -1,6 +1,7 @@
 package org.openfilz.dms.repository.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.SelectedField;
 import io.r2dbc.postgresql.codec.Json;
@@ -21,16 +22,9 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.openfilz.dms.entity.DocumentSqlMapping.*;
-import static org.openfilz.dms.entity.DocumentSqlMapping.CONTENT_TYPE;
-import static org.openfilz.dms.entity.DocumentSqlMapping.CREATED_AT;
-import static org.openfilz.dms.entity.DocumentSqlMapping.CREATED_BY;
-import static org.openfilz.dms.entity.DocumentSqlMapping.METADATA;
-import static org.openfilz.dms.entity.DocumentSqlMapping.SIZE;
-import static org.openfilz.dms.entity.DocumentSqlMapping.UPDATED_AT;
-import static org.openfilz.dms.entity.DocumentSqlMapping.UPDATED_BY;
 
 @RequiredArgsConstructor
-public class AbstractDataFetcher {
+public abstract class AbstractDataFetcher<T, R> implements DataFetcher<T> {
 
     protected static final Map<String, String> DOCUMENT_FIELD_SQL_MAP;
 
@@ -61,6 +55,8 @@ public class AbstractDataFetcher {
     protected StringBuilder toSelect(List<String> fields) {
         return new StringBuilder(SqlUtils.SELECT).append(String.join(SqlUtils.COMMA, fields));
     }
+
+    protected abstract R mapResultRow(io.r2dbc.spi.Readable row, List<String> sqlFields);
 
     protected Document buildDocument(Readable row, List<String> fields) {
         Document.DocumentBuilder builder = Document.builder();
