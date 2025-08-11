@@ -19,7 +19,7 @@ import {
 import {environment} from "../../environments/environment";
 
 const LIST_FOLDER_QUERY = gql`
-  query listFolder($request: ListFolderRequest) {
+  query listFolder($request: ListFolderRequest!) {
     listFolder(request: $request) {
       id
       type
