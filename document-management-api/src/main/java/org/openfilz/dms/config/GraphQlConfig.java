@@ -5,6 +5,8 @@ import graphql.scalars.ExtendedScalars;
 import lombok.RequiredArgsConstructor;
 import org.openfilz.dms.mapper.DocumentMapper;
 import org.openfilz.dms.repository.impl.DocumentDataFetcherImpl;
+import org.openfilz.dms.repository.impl.ListFolderCountDataFetcher;
+import org.openfilz.dms.repository.impl.ListFolderCriteria;
 import org.openfilz.dms.repository.impl.ListFolderDataFetcherImpl;
 import org.openfilz.dms.utils.SqlUtils;
 import org.springframework.context.annotation.Bean;
@@ -28,6 +30,9 @@ public class GraphQlConfig {
 
     private final SqlUtils sqlUtils;
 
+    private final ListFolderCriteria listFolderCriteria;
+
+
     @Bean
     public RuntimeWiringConfigurer runtimeWiringConfigurer() {
         return wiringBuilder -> wiringBuilder
@@ -36,7 +41,8 @@ public class GraphQlConfig {
                 .scalar(ExtendedScalars.GraphQLLong)
                 .scalar(ExtendedScalars.DateTime)
                 .type(QUERY, builder -> builder.dataFetchers(Map.of(
-                        LIST_FOLDER, new ListFolderDataFetcherImpl(databaseClient, mapper, objectMapper, sqlUtils),
+                        LIST_FOLDER, new ListFolderDataFetcherImpl(databaseClient, mapper, objectMapper, sqlUtils, listFolderCriteria),
+                        LIST_FOLDER_COUNT, new ListFolderCountDataFetcher(databaseClient, mapper, objectMapper, sqlUtils, listFolderCriteria),
                         DOCUMENT_BY_ID, new DocumentDataFetcherImpl(databaseClient, mapper, objectMapper, sqlUtils))));
     }
 
