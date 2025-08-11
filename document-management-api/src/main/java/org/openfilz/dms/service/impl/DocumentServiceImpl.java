@@ -216,7 +216,7 @@ public class DocumentServiceImpl implements DocumentService {
             PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
             ZipArchiveOutputStream zos = new ZipArchiveOutputStream(pipedOutputStream);
             children.concatMap(element -> addDocumentToZip(element, zos))
-                    .then()
+                    .then(Mono.just(true))
                     .doOnTerminate(() -> closeOutputStream(zos))
                     .subscribeOn(Schedulers.boundedElastic())
                     .subscribe(
@@ -230,7 +230,7 @@ public class DocumentServiceImpl implements DocumentService {
         }
     }
 
-    private Mono<Void> addDocumentToZip(ChildElementInfo element, ZipArchiveOutputStream zos) {
+    private Mono<Boolean> addDocumentToZip(ChildElementInfo element, ZipArchiveOutputStream zos) {
         if(element.getType().equals(FILE)) {
             return addFileToZip(element, element.getPath(), zos);
         }
@@ -738,7 +738,7 @@ public class DocumentServiceImpl implements DocumentService {
                         }
                         return Flux.fromIterable(docs)
                             .concatMap(doc ->  addDocumentToZip(doc, zos))
-                            .then();
+                            .then(Mono.just(true));
                     })
                     .doOnTerminate(() -> closeOutputStream(zos))
                     .subscribeOn(Schedulers.boundedElastic())
@@ -762,23 +762,23 @@ public class DocumentServiceImpl implements DocumentService {
         }
     }
 
-    private Mono<Void> addFolderToZip(ChildElementInfo folderElement, ZipArchiveOutputStream zos) {
+    private Mono<Boolean> addFolderToZip(ChildElementInfo folderElement, ZipArchiveOutputStream zos) {
         try {
             ZipArchiveEntry zipEntry = new ZipArchiveEntry(folderElement.getPath() + SLASH);
             zos.putArchiveEntry(zipEntry);
             zos.closeArchiveEntry();
-            return Mono.empty();
+            return Mono.just(true);
         } catch (IOException ioe) {
             return Mono.error(new StorageException(ioe.getMessage()));
         }
     }
 
-    private Mono<Void> addFileToZip(PhysicalDocument doc, String path, ZipArchiveOutputStream zos) {
+    private Mono<Boolean> addFileToZip(PhysicalDocument doc, String path, ZipArchiveOutputStream zos) {
         return storageService.loadFile(doc.getStoragePath())
                 .flatMap(resource -> {
                     if (resource == null || !resource.exists()) {
                         log.warn("Skipping missing file in zip: {}", doc.getName());
-                        return Mono.empty();
+                        return Mono.just(false);
                     }
                     return Mono.fromRunnable(() -> {
                         try {
@@ -794,7 +794,7 @@ public class DocumentServiceImpl implements DocumentService {
                             log.error("Exception in addFileToZip", ioe);
                             throw new StorageException(ioe.getMessage());
                         }
-                    }).subscribeOn(Schedulers.boundedElastic()).then();
+                    }).subscribeOn(Schedulers.boundedElastic()).thenReturn(true);
                 });
     }
 
