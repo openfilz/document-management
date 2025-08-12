@@ -29,6 +29,9 @@ public class MinioStorageService implements StorageService {
     private final MinioClient minioClient;
     private final String bucketName;
 
+    @Value("${piped.buffer.size:1024}")
+    private Integer pipedBufferSize;
+
     public MinioStorageService(
             @Value("${storage.minio.endpoint}") String endpoint,
             @Value("${storage.minio.access-key}") String accessKey,
@@ -64,7 +67,7 @@ public class MinioStorageService implements StorageService {
         String objectName = getUniqueStorageFileName(originalFilename); // Ensure unique name
 
         // PipedInputStream will be read by MinIO client
-        PipedInputStream pipedInputStream = new PipedInputStream();
+        PipedInputStream pipedInputStream = new PipedInputStream(pipedBufferSize);
         // PipedOutputStream will be written to by our reactive stream
         // It's important to create PipedOutputStream with the PipedInputStream instance
         PipedOutputStream pipedOutputStream;

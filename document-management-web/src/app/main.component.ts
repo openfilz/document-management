@@ -1,7 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {CommonModule} from '@angular/common';
 import {MatDialog, MatDialogModule} from '@angular/material/dialog';
-import {MatSnackBar, MatSnackBarModule} from '@angular/material/snack-bar';
+import {MatSnackBar, MatSnackBarModule, MatSnackBarRef} from '@angular/material/snack-bar';
 import {MatProgressSpinnerModule} from '@angular/material/progress-spinner';
 import {MatIcon} from "@angular/material/icon";
 import {MatPaginatorModule, PageEvent} from "@angular/material/paginator";
@@ -10,10 +10,8 @@ import {SidebarComponent} from './components/sidebar/sidebar.component';
 import {HeaderComponent} from './components/header/header.component';
 import {FileGridComponent} from './components/file-grid/file-grid.component';
 import {FileListComponent} from './components/file-list/file-list.component';
-import {UploadZoneComponent} from './components/upload-zone/upload-zone.component';
 import {CreateFolderDialogComponent} from './dialogs/create-folder-dialog/create-folder-dialog.component';
 import {RenameDialogComponent, RenameDialogData} from './dialogs/rename-dialog/rename-dialog.component';
-import {SettingsDialogComponent, SettingsDialogData} from './dialogs/settings-dialog/settings-dialog.component';
 
 import {DocumentApiService} from './services/document-api.service';
 import {FileIconService} from './services/file-icon.service';
@@ -29,6 +27,8 @@ import {
 } from './models/document.models';
 
 import {DragDropDirective} from "./directives/drag-drop.directive";
+import {DownloadSnackbarComponent} from "./components/download-snackbar/download-snackbar.component";
+import {DownloadProgressComponent} from "./components/download-progress/download-progress.component";
 
 @Component({
   selector: 'app-main',
@@ -46,15 +46,19 @@ import {DragDropDirective} from "./directives/drag-drop.directive";
     FileListComponent,
     MatIcon,
     DragDropDirective,
-    MatPaginatorModule
+    MatPaginatorModule,
+    DownloadProgressComponent
   ],
 })
 export class MainComponent implements OnInit {
   static itemsPerPage = 'itemsPerPage';
   viewMode: 'grid' | 'list' = 'grid';
   loading = false;
+  isDownloading = false;
   showUploadZone = false;
   fileOver: boolean = false;
+
+  private snackBarRef: MatSnackBarRef<DownloadSnackbarComponent> | null = null;
 
   items: FileItem[] = [];
   breadcrumbs: ElementInfo[] = [];
@@ -291,6 +295,9 @@ export class MainComponent implements OnInit {
   }
 
   onDownloadItem(item: FileItem) {
+    this.isDownloading = true;
+    this.snackBarRef = this.snackBar.openFromComponent(DownloadSnackbarComponent);
+    item.selected = false;
     this.documentApi.downloadDocument(item.id).subscribe({
       next: (blob) => {
         const url = window.URL.createObjectURL(blob);
@@ -301,10 +308,18 @@ export class MainComponent implements OnInit {
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
+        this.isDownloading = false;
+        if (this.snackBarRef) {
+          this.snackBarRef.dismiss();
+        }
       },
       error: (error) => {
         //console.error('Failed to download file:', error);
         this.snackBar.open('Failed to download file', 'Close', { duration: 3000 });
+        this.isDownloading = false;
+        if (this.snackBarRef) {
+          this.snackBarRef.dismiss();
+        }
       }
     });
   }
@@ -330,7 +345,10 @@ export class MainComponent implements OnInit {
     if (selectedItems.length === 1 && selectedItems[0].type === 'FILE') {
       this.onDownloadItem(selectedItems[0]);
     } else if (selectedItems.length > 1) {
+      this.isDownloading = true;
+      console.log('isDownloading:', this.isDownloading);
       const documentIds = selectedItems.map(item => item.id);
+      this.selectedItems.forEach(item => item.selected = false);
       this.documentApi.downloadMultipleDocuments(documentIds).subscribe({
         next: (blob) => {
           const url = window.URL.createObjectURL(blob);
@@ -341,10 +359,14 @@ export class MainComponent implements OnInit {
           a.click();
           document.body.removeChild(a);
           window.URL.revokeObjectURL(url);
+          this.isDownloading = false;
+          console.log('isDownloading:', this.isDownloading);
         },
         error: (error) => {
           //console.error('Failed to download files:', error);
           this.snackBar.open('Failed to download files', 'Close', { duration: 3000 });
+          this.isDownloading = false;
+          console.log('isDownloading:', this.isDownloading);
         }
       });
     }

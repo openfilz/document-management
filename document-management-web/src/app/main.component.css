@@ -24,30 +24,6 @@ mat-paginator {
   border-top: 1px solid #e0e0e0;
 }
 
-.settings-button {
-  position: fixed;
-  bottom: 8px;
-  left: 200px; /* Sidebar width + some padding */
-  z-index: 1001;
-  background-color: transparent;
-  color: #2196F3; /* Material Design Blue 500 */
-  border: none;
-}
-
-@media (max-width: 768px) {
-  .main-content {
-    margin-left: 60px;
-  }
-
-  mat-paginator {
-    left: 60px;
-  }
-
-  .settings-button {
-    left: 80px;
-  }
-}
-
 .empty-state {
   display: flex;
   justify-content: center;

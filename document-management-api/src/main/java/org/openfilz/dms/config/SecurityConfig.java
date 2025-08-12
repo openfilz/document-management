@@ -24,6 +24,7 @@ import org.springframework.security.web.server.authorization.AuthorizationContex
 public class SecurityConfig {
 
     public static final String ALL_MATCHES = "/**";
+
     @Value("${spring.security.no-auth}")
     private Boolean noAuth;
 

@@ -65,6 +65,9 @@
         </div>
     }
   </div>
+    @if (isDownloading) {
+        <app-download-progress></app-download-progress>
+    }
   <mat-paginator
     [length]="totalItems"
     [pageSize]="pageSize"
