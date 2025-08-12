@@ -4,21 +4,20 @@
 **[maven-release-plugin] prepare for next development iteration**
 
 
-[f50dafa2e5323f4](https://github.com/openfilz/document-management/commit/f50dafa2e5323f4) maven-release-bot[bot] *2025-08-10 21:09:54*
+[ad9cb159c885253](https://github.com/openfilz/document-management/commit/ad9cb159c885253) maven-release-bot[bot] *2025-08-11 15:59:21*
 
 
-## v1.0.52
+## v1.0.53
 ### No issue
 
-**[maven-release-plugin] prepare release v1.0.52**
+**[maven-release-plugin] prepare release v1.0.53**
 
 
-[507ab9931f1f5b1](https://github.com/openfilz/document-management/commit/507ab9931f1f5b1) maven-release-bot[bot] *2025-08-10 21:09:52*
+[eafbbd4b6372de8](https://github.com/openfilz/document-management/commit/eafbbd4b6372de8) maven-release-bot[bot] *2025-08-11 15:59:18*
 
-**Merge pull request #83**
+**Add Count in GraphQL (RAF : use it in GUI)**
 
- * develop
 
-[e28af900961eb80](https://github.com/openfilz/document-management/commit/e28af900961eb80) Yann Demel *2025-08-10 21:09:04*
+[d6a44c32242ff5e](https://github.com/openfilz/document-management/commit/d6a44c32242ff5e) Yann Demel *2025-08-11 15:58:29*
 
 
