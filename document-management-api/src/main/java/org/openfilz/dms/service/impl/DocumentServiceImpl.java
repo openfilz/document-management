@@ -26,6 +26,7 @@ import org.openfilz.dms.service.DocumentService;
 import org.openfilz.dms.service.StorageService;
 import org.openfilz.dms.utils.JsonUtils;
 import org.openfilz.dms.utils.UserPrincipalExtractor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.codec.multipart.FilePart;
@@ -63,6 +64,9 @@ public class DocumentServiceImpl implements DocumentService {
     private final AuditService auditService; // For auditing
     private final JsonUtils jsonUtils;
     private final DocumentDAO documentDAO;
+
+    @Value("${piped.buffer.size:1024}")
+    private Integer pipedBufferSize;
 
 
     @Override
@@ -212,7 +216,7 @@ public class DocumentServiceImpl implements DocumentService {
 
     private Mono<? extends Resource> zipFolder(Flux<ChildElementInfo> children) {
         try {
-            PipedInputStream pipedInputStream = new PipedInputStream();
+            PipedInputStream pipedInputStream = new PipedInputStream(pipedBufferSize);
             PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
             ZipArchiveOutputStream zos = new ZipArchiveOutputStream(pipedOutputStream);
             children.concatMap(element -> addDocumentToZip(element, zos))
@@ -723,7 +727,7 @@ public class DocumentServiceImpl implements DocumentService {
             }
 
             try {
-                PipedInputStream pipedInputStream = new PipedInputStream();
+                PipedInputStream pipedInputStream = new PipedInputStream(pipedBufferSize);
                 PipedOutputStream pipedOutputStream = new PipedOutputStream(pipedInputStream);
                 ZipArchiveOutputStream zos = new ZipArchiveOutputStream(pipedOutputStream);
 
@@ -787,7 +791,6 @@ public class DocumentServiceImpl implements DocumentService {
                             zos.putArchiveEntry(zipEntry);
                             try (InputStream is = resource.getInputStream()) {
                                 is.transferTo(zos);
-                            } finally {
                                 zos.closeArchiveEntry();
                             }
                         } catch (IOException ioe) {

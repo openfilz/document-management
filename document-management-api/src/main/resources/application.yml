@@ -70,6 +70,10 @@ logging:
 server:
   port: 8081
 
+# Buffer size for PipedInputStreams
+piped:
+  buffer:
+    size: 8192
 
 
 # Database schema initialization (e.g., Flyway or Liquibase if preferred)
