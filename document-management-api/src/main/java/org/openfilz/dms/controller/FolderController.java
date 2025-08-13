@@ -77,6 +77,7 @@ public class FolderController {
         return documentService.listFolderInfo(folderId, onlyFiles, onlyFolders, authentication);
     }
 
+    @Deprecated
     @GetMapping("/count") // List all documents in a given folder
     @Operation(summary = "Count files and subfolders contained in a given folder - return 0 if empty or not exists",
             description = "Retrieves the number of elements (files and folders) contained in a given folder - return 0 if empty or not exists" +
