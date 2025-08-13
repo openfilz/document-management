@@ -37,7 +37,7 @@ const LIST_FOLDER_QUERY = gql`
 
 const LIST_FOLDER_AND_COUNT_QUERY = gql`
   query listFolderAndCount($request1: ListFolderRequest!, $request2: ListFolderRequest) {
-    listFolder(request1: $request1) {
+    listFolder(request: $request1) {
       id
       type
       contentType
@@ -48,7 +48,7 @@ const LIST_FOLDER_AND_COUNT_QUERY = gql`
       createdBy
       updatedBy
     }
-    count(request2: $request2)
+    count(request: $request2)
   }
 `;
 
@@ -117,8 +117,10 @@ export class DocumentApiService {
       variables: { request1, request2 }
     }).valueChanges.pipe(
       map(result => {
-        listFolder: result.data.listFolder,
-        count: result.data.count
+        return {
+          listFolder: result.data.listFolder,
+          count: result.data.count
+        };
       })
     );
     

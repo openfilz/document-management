@@ -21,7 +21,7 @@ import {
   DeleteRequest,
   DocumentType,
   ElementInfo,
-  FileItem,
+  FileItem, ListFolderAndCountResponse,
   RenameRequest,
   Root
 } from './models/document.models';
@@ -108,16 +108,15 @@ export class MainComponent implements OnInit {
   loadFolder(folder?: FileItem) {
     this.loading = true;
     this.currentFolder = folder;
-    this.documentApi.coun
-    this.documentApi.countItems(this.currentFolder?.id).subscribe({
-      next: (count) => {
-        this.totalItems = count;
+    this.documentApi.listFolderAndCount(this.currentFolder?.id, 1, this.pageSize).subscribe({
+      next: (listAndCount: ListFolderAndCountResponse) => {
+        this.totalItems = listAndCount.count;
         this.pageIndex = 0;
-        this.loadItems();
+        this.populateFolderContents(listAndCount.listFolder);
       },
       error: (error) => {
         //console.error('Failed to count items:', error);
-        this.snackBar.open('Failed to count items in folder', 'Close', { duration: 3000 });
+        this.snackBar.open('Failed to load folder contents', 'Close', { duration: 3000 });
         this.loading = false;
       }
     });
@@ -128,14 +127,7 @@ export class MainComponent implements OnInit {
     this.documentApi.listFolder(this.currentFolder?.id, this.pageIndex + 1, this.pageSize).subscribe({
       next: (response: ElementInfo[]) => {
         //console.log("loadItems " + response);
-        this.items = response.map(item => ({
-          ...item,
-          selected: false,
-          icon: this.fileIconService.getFileIcon(item.name, item.type)
-        }));
-        this.showUploadZone = this.items.length === 0;
-        this.loading = false;
-        this.updateBreadcrumbs(this.currentFolder);
+        this.populateFolderContents(response);
       },
       error: (error) => {
         //console.error('Failed to load folder:', error);
@@ -143,6 +135,17 @@ export class MainComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  private populateFolderContents(response: ElementInfo[]) {
+    this.items = response.map(item => ({
+      ...item,
+      selected: false,
+      icon: this.fileIconService.getFileIcon(item.name, item.type)
+    }));
+    this.showUploadZone = this.items.length === 0;
+    this.loading = false;
+    this.updateBreadcrumbs(this.currentFolder);
   }
 
   onPageChange(event: PageEvent) {

@@ -1,4 +1,4 @@
 export const environment = {
-    apiURL: 'http://localhost:8081/api/v1',
-    graphQlURL: 'http://localhost:8081/graphql/v1'
+    apiURL: 'https://test-document-management-api-ged-lab.apps.lab.oddo.fr/api/v1',
+    graphQlURL: 'https://test-document-management-api-ged-lab.apps.lab.oddo.fr/graphql/v1'
 };
