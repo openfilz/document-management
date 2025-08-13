@@ -126,14 +126,6 @@ export class DocumentApiService {
     
   }
 
-  countItems(folderId?: string): Observable<number> {
-    let params = new HttpParams();
-    if (folderId) {
-      params = params.set('folderId', folderId);
-    }
-    return this.http.get<number>(`${this.baseUrl}/folders/count`, { params });
-  }
-
   createFolder(request: CreateFolderRequest): Observable<FolderResponse> {
     return this.http.post<FolderResponse>(`${this.baseUrl}/folders`, request, {
       headers: this.getHeaders()
