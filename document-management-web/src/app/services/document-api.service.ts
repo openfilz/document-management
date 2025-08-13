@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import {map, Observable} from 'rxjs';
+import {filter, map, Observable} from 'rxjs';
 import { Apollo, gql } from 'apollo-angular';
 import {
   ElementInfo,
@@ -14,7 +14,8 @@ import {
   UploadResponse,
   SearchByMetadataRequest,
   MultipleUploadFileParameter,
-  MultipleUploadFileParameterAttributes
+  MultipleUploadFileParameterAttributes,
+  ListFolderAndCountResponse
 } from '../models/document.models';
 import {environment} from "../../environments/environment";
 
@@ -31,6 +32,23 @@ const LIST_FOLDER_QUERY = gql`
       createdBy
       updatedBy
     }
+  }
+`;
+
+const LIST_FOLDER_AND_COUNT_QUERY = gql`
+  query listFolderAndCount($request1: ListFolderRequest!, $request2: ListFolderRequest) {
+    listFolder(request1: $request1) {
+      id
+      type
+      contentType
+      name
+      size
+      createdAt
+      updatedAt
+      createdBy
+      updatedBy
+    }
+    count(request2: $request2)
   }
 `;
 
@@ -58,6 +76,8 @@ export class DocumentApiService {
     });
   }
 
+
+
   // Folder operations
   listFolder(folderId?: string, page: number = 1, pageSize: number = 50): Observable<ElementInfo[]> {
     //console.log(`listFolder ${folderId} - page ${page}`);
@@ -76,6 +96,32 @@ export class DocumentApiService {
     }).valueChanges.pipe(
       map(result => result.data.listFolder)
     );
+  }
+
+  listFolderAndCount(folderId?: string, page: number = 1, pageSize: number = 50): Observable<ListFolderAndCountResponse> {
+    const request1 = {
+      id: folderId,
+      pageInfo: {
+        pageNumber: page,
+        pageSize: pageSize
+      }
+    };
+
+    const request2 = {
+      id: folderId
+    };
+
+    return this.apollo.watchQuery<any>({
+      fetchPolicy: 'no-cache',
+      query: LIST_FOLDER_AND_COUNT_QUERY,
+      variables: { request1, request2 }
+    }).valueChanges.pipe(
+      map(result => {
+        listFolder: result.data.listFolder,
+        count: result.data.count
+      })
+    );
+    
   }
 
   countItems(folderId?: string): Observable<number> {

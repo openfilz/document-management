@@ -6,6 +6,11 @@ export interface ElementInfo {
   type: DocumentType;
 }
 
+export interface ListFolderAndCountResponse {
+  listFolder: ElementInfo[];
+  count: number;
+}
+
 export interface DocumentInfo {
   type: DocumentType;
   name: string;

@@ -108,7 +108,7 @@ export class MainComponent implements OnInit {
   loadFolder(folder?: FileItem) {
     this.loading = true;
     this.currentFolder = folder;
-
+    this.documentApi.coun
     this.documentApi.countItems(this.currentFolder?.id).subscribe({
       next: (count) => {
         this.totalItems = count;
